@@ -13,7 +13,11 @@ export default function ProfilePage() {
     }
     getMe(token)
       .then((res) => setUser(res.data))
-      .catch((err) => setStatus(err.response?.data?.message || "Không lấy được thông tin người dùng"));
+      .catch((err) =>
+        setStatus(
+          err.response?.data?.message || "Không lấy được thông tin người dùng"
+        )
+      );
   }, []);
 
   return (
