@@ -22,3 +22,13 @@ export const verifyToken = (req, res, next) => {
     return res.status(401).json({ message: "Token không hợp lệ." });
   }
 };
+
+
+export const admin = (req, res, next) => {
+  // Hàm này phải được dùng SAU hàm protect
+  if (req.user && req.user.role === 'ADMIN') {
+    next(); // Nếu là admin, cho phép đi tiếp
+  } else {
+    res.status(403).json({ message: 'Forbidden: Yêu cầu quyền Admin' });
+  }
+};
