@@ -1,10 +1,10 @@
-// src/server.js
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import otpRoutes from "./routes/otp.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 dotenv.config();
 const app = express();
@@ -24,6 +24,7 @@ app.get("/", (req, res) => {
 // ✅ Khai báo route API chính
 app.use("/api/auth", authRoutes);
 app.use("/api/otp", otpRoutes);
+app.use("/api/admin", adminRoutes);
 
 // ✅ Xử lý route không tồn tại
 app.use((req, res) => {
