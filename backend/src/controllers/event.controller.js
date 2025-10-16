@@ -73,3 +73,48 @@ export const deleteEvent = async (req, res) => {
         res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
 };
+
+
+
+
+// [GET] /api/events/public -> Lấy danh sách sự kiện đã được duyệt
+export const getApprovedEvents = async (req, res) => {
+    try {
+        const { category, date } = req.query; // Nhận tham số lọc từ URL
+        
+        const filter = { status: 'approved' };
+
+        if (category) {
+            filter.category = category;
+        }
+        if (date) {
+            const startDate = new Date(date);
+            const endDate = new Date(date);
+            endDate.setDate(endDate.getDate() + 1);
+            filter.date = { $gte: startDate, $lt: endDate };
+        }
+
+        const events = await Event.find(filter)
+            .sort({ date: 1 })
+            .populate('createdBy', 'name'); // Lấy tên người tạo
+            
+        res.status(200).json(events);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+};
+
+// [GET] /api/events/public/:id -> Xem chi tiết một sự kiện
+export const getEventDetails = async (req, res) => {
+    try {
+        const event = await Event.findOne({ _id: req.params.id, status: 'approved' })
+            .populate('createdBy', 'name');
+            
+        if (!event) {
+            return res.status(404).json({ message: 'Không tìm thấy sự kiện hoặc sự kiện chưa được duyệt.' });
+        }
+        res.status(200).json(event);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+};
