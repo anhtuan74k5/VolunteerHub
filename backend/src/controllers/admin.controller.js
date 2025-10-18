@@ -97,3 +97,17 @@ export const getDashboardStats = async (req, res) => {
         res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
 };
+
+
+// [GET] /api/admin/events/all -> Admin xem tất cả sự kiện trong hệ thống
+export const getAllSystemEvents = async (req, res) => {
+    try {
+        const events = await Event.find({}) // Lấy TẤT CẢ sự kiện
+            .populate('createdBy', 'name email') // Ghép thông tin người quản lý
+            .sort({ createdAt: -1 });
+            
+        res.status(200).json(events);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+};
