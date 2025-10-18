@@ -5,6 +5,8 @@ import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import otpRoutes from "./routes/otp.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import eventRoutes from './routes/event.routes.js';
+import registrationRoutes from "./routes/registration.routes.js";
 
 dotenv.config();
 const app = express();
@@ -25,6 +27,8 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/otp", otpRoutes);
 app.use("/api/admin", adminRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/registrations', registrationRoutes);
 
 // ✅ Xử lý route không tồn tại
 app.use((req, res) => {
