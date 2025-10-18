@@ -4,6 +4,7 @@ import {
     getPendingEvents,
     approveEvent,
     deleteEventByAdmin,
+    getAllSystemEvents,
     getAllUsers,
     updateUserStatus,
     exportUsers,
@@ -17,6 +18,7 @@ const router = express.Router();
 router.use(verifyToken, admin);
 
 // Routes cho Quản lý Sự kiện
+router.get('/events/all', getAllSystemEvents);
 router.get('/events/pending', getPendingEvents);
 router.put('/events/:id/approve', approveEvent);
 router.delete('/events/:id', deleteEventByAdmin);
