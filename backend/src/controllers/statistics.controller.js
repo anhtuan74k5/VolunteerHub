@@ -200,3 +200,64 @@ export const getManagerMonthlyStats = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc 📅 Lấy toàn bộ sự kiện trong hệ thống (tất cả user đều có thể xem)
+ * @route GET /api/statistics/events
+ * @access Private (Tất cả vai trò)
+ */
+export const getAllEventsForAllUsers = async (req, res) => {
+  try {
+    // 📌 Lấy toàn bộ sự kiện từ database, sắp xếp theo thời gian
+    const events = await Event.find({})
+      .sort({ date: -1 }) // Sự kiện gần nhất lên đầu
+      .populate("createdBy", "name email role") // Gắn thông tin người tạo
+      .lean();
+
+    if (!events.length) {
+      return res.status(200).json({
+        message: "👀 Hiện tại chưa có sự kiện nào trong hệ thống.",
+        events: [],
+      });
+    }
+
+    // 📊 Lấy thống kê số lượt đăng ký & yêu cầu hủy cho từng sự kiện
+    const eventIds = events.map((e) => e._id);
+    const registrationStats = await Registration.aggregate([
+      { $match: { event: { $in: eventIds } } },
+      {
+        $group: {
+          _id: "$event",
+          totalRegistrations: { $sum: 1 },
+          cancelRequests: {
+            $sum: { $cond: [{ $eq: ["$cancelRequest", true] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    // Chuyển kết quả thành Map để tra cứu nhanh
+    const statsMap = registrationStats.reduce((acc, s) => {
+      acc[s._id.toString()] = s;
+      return acc;
+    }, {});
+
+    // Gộp thống kê vào từng sự kiện
+    const result = events.map((e) => ({
+      ...e,
+      totalRegistrations: statsMap[e._id]?.totalRegistrations || 0,
+      cancelRequests: statsMap[e._id]?.cancelRequests || 0,
+    }));
+
+    res.status(200).json({
+      total: result.length,
+      events: result,
+    });
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy danh sách sự kiện:", error);
+    res.status(500).json({
+      message: "Lỗi khi lấy danh sách sự kiện",
+      error: error.message,
+    });
+  }
+};

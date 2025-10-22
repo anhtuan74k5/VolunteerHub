@@ -7,6 +7,7 @@ import {
   getManagerMonthlyStats,
 } from "../controllers/statistics.controller.js";
 import { verifyToken, eventManager } from "../middlewares/auth.js";
+import { getAllEventsForAllUsers } from "../controllers/statistics.controller.js";
 
 const router = express.Router();
 
@@ -38,5 +39,9 @@ router.get(
   eventManager,
   getManagerMonthlyStats
 );
+
+//[GET] /api/statistics/events
+// Lấy tất cả sự kiện cho tất cả người dùng
+router.get("/events", verifyToken, getAllEventsForAllUsers);
 
 export default router;
