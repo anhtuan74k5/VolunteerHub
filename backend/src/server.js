@@ -25,7 +25,6 @@ app.get("/", (req, res) => {
 
 // ✅ Khai báo route API chính
 app.use("/api/auth", authRoutes);
-app.use("/api/otp", otpRoutes);
 app.use("/api/admin", adminRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/registrations', registrationRoutes);

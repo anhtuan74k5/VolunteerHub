@@ -1,7 +1,90 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/user.js";
+import Otp from "../models/otp.js"; // 👈 Thêm import
+import { generateOtp } from "../utils/generateOtp.js"; // 👈 Thêm import
+import { sendOtpEmail } from "../utils/sendMail.js"; // 👈 Thêm import
 
+
+// --- ĐĂNG KÝ (Sử dụng OTP) ---
+
+// 📩 Gửi OTP Đăng ký
+export const sendRegisterOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Vui lòng nhập email." });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ message: "Email đã được sử dụng." });
+
+    const otp = generateOtp();
+    await Otp.create({
+      email,
+      otp,
+      purpose: "REGISTER",
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 phút
+    });
+
+    await sendOtpEmail(email, otp, "Đăng ký tài khoản VolunteerHub");
+    res.status(200).json({ message: "OTP đăng ký đã được gửi đến email." });
+  } catch (err) {
+    console.error("❌ Lỗi trong sendRegisterOtp:", err);
+    return res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
+// ✅ Xác thực OTP & Tạo tài khoản
+export const verifyAndRegister = async (req, res) => {
+  try {
+    const { email, name, username, birthday, password, otp } = req.body;
+
+    // 1. Kiểm tra OTP
+    const record = await Otp.findOne({ email, otp, purpose: "REGISTER" });
+    if (!record) return res.status(400).json({ message: "OTP không hợp lệ." });
+    if (record.expiresAt < new Date())
+      return res.status(400).json({ message: "OTP đã hết hạn." });
+
+    // 2. ✅ LOGIC VALIDATE NGÀY SINH (Đã thêm)
+    const birthDate = new Date(birthday);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    birthDate.setHours(0, 0, 0, 0);
+
+    if (birthDate >= today) {
+      return res
+        .status(400)
+        .json({ message: "Ngày sinh không hợp lệ." });
+    }
+    const tenYearsAgo = new Date();
+    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+    if (birthDate > tenYearsAgo) {
+      return res
+        .status(400)
+        .json({ message: "Bạn phải lớn hơn 10 tuổi để đăng ký." });
+    }
+
+    // 3. Tạo User
+    const hashed = await bcrypt.hash(password, 10);
+    await User.create({ email, name, username, birthday, password: hashed });
+
+    // 4. Xóa OTP đã dùng
+    await Otp.deleteMany({ email, purpose: "REGISTER" });
+    res.status(201).json({ message: "Tài khoản đã được tạo thành công." });
+  } catch (err) {
+    console.error("❌ Lỗi trong verifyAndRegister:", err);
+    // Bắt lỗi trùng username/email (nếu có)
+    if (err.code === 11000) {
+       return res.status(400).json({ message: "Email hoặc Tên đăng nhập đã tồn tại." });
+    }
+    return res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
+
+// --- ĐĂNG NHẬP VÀ QUẢN LÝ HỒ SƠ ---
 /**
  * 🔑 Đăng nhập bằng email hoặc username
  */
@@ -157,6 +240,107 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+
+// --- QUÊN MẬT KHẨU ---
+
+// 📩 Gửi OTP Reset Mật khẩu
+export const sendResetOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "Email không tồn tại." });
+
+    const otp = generateOtp();
+    await Otp.create({
+      email,
+      otp,
+      purpose: "RESET",
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+
+    await sendOtpEmail(email, otp, "Khôi phục mật khẩu VolunteerHub");
+    res.status(200).json({ message: "OTP khôi phục mật khẩu đã được gửi." });
+  } catch (err) {
+    console.error("❌ Lỗi trong sendResetOtp:", err);
+    return res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
+// 🔑 Reset Mật khẩu bằng OTP
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const record = await Otp.findOne({ email, otp, purpose: "RESET" });
+    if (!record) return res.status(400).json({ message: "OTP không hợp lệ." });
+    if (record.expiresAt < new Date())
+      return res.status(400).json({ message: "OTP đã hết hạn." });
+    
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await User.findOneAndUpdate({ email }, { password: hashed });
+
+    await Otp.deleteMany({ email, purpose: "RESET" });
+    res.status(200).json({ message: "Mật khẩu đã được cập nhật thành công." });
+  } catch (err) {
+    console.error("❌ Lỗi trong resetPassword:", err);
+    return res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
+
+
+/**
+ * 🔒 Thay đổi mật khẩu (khi người dùng đã đăng nhập)
+ */
+export const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    
+    // 1. Lấy userId từ middleware 'verifyToken'
+    // Lưu ý: Dùng req.user._id (vì verifyToken mới đã gán đầy đủ user)
+    const userId = req.user._id; 
+
+    // 2. Kiểm tra dữ liệu đầu vào
+    if (!oldPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng nhập mật khẩu cũ và mới." });
+    }
+
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
+    }
+
+    // 3. Lấy thông tin user (lần này cần lấy cả password)
+    // .select('+password') là cần thiết nếu bạn đã ẩn password trong schema
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    }
+
+    // 4. Kiểm tra mật khẩu cũ
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Mật khẩu cũ không chính xác." });
+    }
+
+    // 5. Băm và lưu mật khẩu mới
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save(); // Lưu lại user với mật khẩu mới
+
+    return res.status(200).json({ message: "Đổi mật khẩu thành công." });
+  } catch (err) {
+    console.error("❌ Lỗi khi thay đổi mật khẩu:", err);
+    return res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
 /**
  * 👥 Lấy danh sách toàn bộ người dùng (chỉ ADMIN)
  */
