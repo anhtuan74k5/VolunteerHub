@@ -117,6 +117,8 @@ export const getEventDetails = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
+<<<<<<< HEAD
+=======
 };
 
 
@@ -131,4 +133,5 @@ export const getMyEvents = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
+>>>>>>> origin/main
 };
