@@ -11,6 +11,25 @@ const userSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    gender: {
+      type: String,
+      enum: ["Male", "Female"],
+      default: null,
+    },
+    phone: {
+      type: String,
+      trim: true, 
+      default: null,
+    },
+    avatar: {
+      type: String,
+      default: "https://cdn-icons-png.flaticon.com/512/149/149071.png", 
+    },
+    points: {
+      type: Number,
+      default: 0, 
+      min: 0, 
+    },
     email: {
       type: String,
       required: true,

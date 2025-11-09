@@ -39,7 +39,7 @@ export const sendRegisterOtp = async (req, res) => {
 // ✅ Xác thực OTP & Tạo tài khoản
 export const verifyAndRegister = async (req, res) => {
   try {
-    const { email, name, username, birthday, password, otp } = req.body;
+    const { email, name, username, birthday, password, otp, gender, phone, avatar } = req.body;
 
     // 1. Kiểm tra OTP
     const record = await Otp.findOne({ email, otp, purpose: "REGISTER" });
@@ -68,7 +68,7 @@ export const verifyAndRegister = async (req, res) => {
 
     // 3. Tạo User
     const hashed = await bcrypt.hash(password, 10);
-    await User.create({ email, name, username, birthday, password: hashed });
+    await User.create({ email, name, username, birthday, password: hashed, gender, phone, avatar });
 
     // 4. Xóa OTP đã dùng
     await Otp.deleteMany({ email, purpose: "REGISTER" });
@@ -135,6 +135,10 @@ export const login = async (req, res) => {
         birthday: user.birthday,
         role: user.role,
         status: user.status,
+        gender: user.gender,     
+        phone: user.phone,       
+        avatar: user.avatar,     
+        points: user.points,     
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -148,29 +152,18 @@ export const login = async (req, res) => {
 /**
  * 👤 Lấy thông tin người dùng hiện tại từ JWT
  */
+
 export const getMe = async (req, res) => {
   try {
-    if (!req.user || !req.user.userId) {
-      return res
-        .status(401)
-        .json({ message: "Token không hợp lệ hoặc chưa đăng nhập." });
-    }
+    // Middleware 'verifyToken' đã giải mã token, tìm người dùng trong DB,
+    // và gán toàn bộ đối tượng user vào 'req.user'.
 
-    const user = await User.findById(req.user.userId).select("-password");
-    if (!user)
-      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    // Chúng ta không cần kiểm tra 'req.user.userId' hay tìm lại user.
+    // Nếu 'req.user' không tồn tại, middleware đã trả về lỗi 401 rồi.
 
-    return res.json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      username: user.username,
-      birthday: user.birthday,
-      role: user.role,
-      status: user.status,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    });
+    // Chỉ cần trả về đối tượng 'req.user' đã được gán sẵn.
+    return res.status(200).json(req.user);
+
   } catch (err) {
     console.error("❌ Lỗi trong getMe:", err);
     return res.status(500).json({ message: "Lỗi server", error: err.message });
@@ -182,31 +175,32 @@ export const getMe = async (req, res) => {
  */
 export const updateProfile = async (req, res) => {
   try {
-    if (!req.user || !req.user.userId) {
-      return res
-        .status(401)
-        .json({ message: "Token không hợp lệ hoặc chưa đăng nhập." });
-    }
+    // 👇 FIX 1: Sửa lại cách lấy ID cho đúng với middleware 'verifyToken'
+    // Middleware 'verifyToken' gán user đầy đủ vào req.user
+    const userId = req.user._id;
 
-    const { name, username, birthday, email } = req.body;
+    // 👇 THÊM các trường mới vào
+    const { name, username, birthday, email, 
+            gender, phone, avatar } = req.body;
+
+    // Giữ nguyên logic validate cho các trường bắt buộc
     if (!name || !username || !birthday || !email) {
       return res
         .status(400)
-        .json({ message: "Vui lòng nhập đầy đủ thông tin." });
+        .json({ message: "Vui lòng nhập đầy đủ thông tin (tên, username, ngày sinh, email)." });
     }
 
-    // ✅ Kiểm tra trùng email / username
+    // ✅ Kiểm tra trùng email / username (giữ nguyên)
     const emailExists = await User.findOne({
       email,
-      _id: { $ne: req.user.userId },
+      _id: { $ne: userId },
     });
     if (emailExists) {
       return res.status(400).json({ message: "Email này đã được sử dụng." });
     }
-
     const usernameExists = await User.findOne({
       username,
-      _id: { $ne: req.user.userId },
+      _id: { $ne: userId },
     });
     if (usernameExists) {
       return res
@@ -214,11 +208,13 @@ export const updateProfile = async (req, res) => {
         .json({ message: "Tên đăng nhập này đã được sử dụng." });
     }
 
-    // ✅ Cập nhật thông tin
+    // 👇 THÊM các trường mới vào object cập nhật
     const updatedUser = await User.findByIdAndUpdate(
-      req.user.userId,
-      { name, username, birthday, email },
-      { new: true, runValidators: true }
+      userId,
+      { 
+        name, username, birthday, email, gender, phone, avatar 
+      },
+      { new: true, runValidators: true } // 'new: true' để trả về user đã cập nhật
     ).select("-password");
 
     if (!updatedUser) {
@@ -227,7 +223,7 @@ export const updateProfile = async (req, res) => {
 
     return res.json({
       message: "Cập nhật hồ sơ thành công.",
-      user: updatedUser,
+      user: updatedUser, // Trả về user đã được cập nhật
     });
   } catch (err) {
     console.error("❌ Lỗi khi cập nhật hồ sơ:", err);
