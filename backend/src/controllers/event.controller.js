@@ -117,4 +117,21 @@ export const getEventDetails = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Lỗi server', error: error.message });
     }
+<<<<<<< HEAD
+=======
+};
+
+
+// [GET] /api/events/my-events -> Manager xem các sự kiện do mình tạo
+export const getMyEvents = async (req, res) => {
+    try {
+        // Lấy tất cả sự kiện có createdBy bằng ID của user đang đăng nhập
+        const events = await Event.find({ createdBy: req.user._id })
+            .sort({ createdAt: -1 }); // Sắp xếp mới nhất lên đầu
+            
+        res.status(200).json(events);
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+>>>>>>> origin/main
 };
