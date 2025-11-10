@@ -1,15 +1,15 @@
-import express from 'express';
-import { admin, verifyToken } from '../middlewares/auth.js';
+import express from "express";
+import { admin, verifyToken } from "../middlewares/auth.js";
 import {
-    getPendingEvents,
-    approveEvent,
-    deleteEventByAdmin,
-    getAllSystemEvents,
-    getAllUsers,
-    updateUserStatus,
-    exportUsers,
-    getDashboardStats
-} from '../controllers/admin.controller.js';
+  getPendingEvents,
+  approveEvent,
+  deleteEventByAdmin,
+  getAllSystemEvents,
+  getAllUsers,
+  updateUserStatus,
+  exportUsers,
+  getDashboardStats,
+} from "../controllers/admin.controller.js";
 
 const router = express.Router();
 
@@ -18,19 +18,19 @@ const router = express.Router();
 router.use(verifyToken, admin);
 
 // Routes cho Quản lý Sự kiện
-router.get('/events/all', getAllSystemEvents);
-router.get('/events/pending', getPendingEvents);
-router.put('/events/:id/approve', approveEvent);
-router.delete('/events/:id', deleteEventByAdmin);
+router.get("/events/all", getAllSystemEvents);
+router.get("/events/pending", getPendingEvents);
+router.put("/events/:id/approve", approveEvent);
+router.delete("/events/:id", deleteEventByAdmin);
 
 // Routes cho Quản lý Người dùng
-router.get('/users', getAllUsers);
-router.put('/users/:id/status', updateUserStatus);
+router.get("/users", getAllUsers);
+router.put("/users/:id/status", updateUserStatus);
 
 // Route cho Xuất Dữ liệu
-router.get('/export/users', exportUsers);
+router.get("/export/users", exportUsers);
 
 // Route cho Dashboard
-router.get('/dashboard', getDashboardStats);
+router.get("/dashboard", getDashboardStats);
 
 export default router;

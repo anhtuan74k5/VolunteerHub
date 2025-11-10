@@ -1,0 +1,215 @@
+{
+  "info": {
+    "name": "VolunteerHub Dashboard & Admin",
+    "_postman_id": "volunteerhub-collection-001",
+    "description": "Postman collection for testing VolunteerHub backend APIs (Volunteer, Manager, Admin dashboards).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔑 Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"volunteer1@example.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 Volunteer Dashboard",
+      "item": [
+        {
+          "name": "Get Volunteer Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGYzY2JhNjNkMmYzOGE4MDVlYTUzNzgiLCJyb2xlIjoiVk9MVU5URUVSIiwiaWF0IjoxNzYwODA4NzEzLCJleHAiOjE3NjA4OTUxMTN9.vNDYnbYpLU4uVAn5ktEKozS2qEMSHmmbj7dL1-4uYe8"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/dashboard/volunteer",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "dashboard", "volunteer"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👨‍💼 Manager Dashboard",
+      "item": [
+        {
+          "name": "Get All Events (Manager)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGYzY2JhNjNkMmYzOGE4MDVlYTUzNzYiLCJyb2xlIjoiRVZFTlRNQU5BR0VSIiwiaWF0IjoxNzYwODA5MjMyLCJleHAiOjE3NjA4OTU2MzJ9.brUL4UMYR9WBndt5ij7LoKJAeiQR9_yMu-9V-94Dc5k"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/dashboard/manager/events",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "dashboard", "manager", "events"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Registrations by Event",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGYzY2JhNjNkMmYzOGE4MDVlYTUzNzYiLCJyb2xlIjoiRVZFTlRNQU5BR0VSIiwiaWF0IjoxNzYwODA5MjMyLCJleHAiOjE3NjA4OTU2MzJ9.brUL4UMYR9WBndt5ij7LoKJAeiQR9_yMu-9V-94Dc5k"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/dashboard/manager/events/{{eventId}}/registrations",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": [
+                "api",
+                "dashboard",
+                "manager",
+                "events",
+                "{{eventId}}",
+                "registrations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Cancel Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGYzY2JhNjNkMmYzOGE4MDVlYTUzNzYiLCJyb2xlIjoiRVZFTlRNQU5BR0VSIiwiaWF0IjoxNzYwODA5MjMyLCJleHAiOjE3NjA4OTU2MzJ9.brUL4UMYR9WBndt5ij7LoKJAeiQR9_yMu-9V-94Dc5k"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/dashboard/manager/registrations/{{registrationId}}/approve-cancel",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": [
+                "api",
+                "dashboard",
+                "manager",
+                "registrations",
+                "{{registrationId}}",
+                "approve-cancel"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reject Cancel Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGYzY2JhNjNkMmYzOGE4MDVlYTUzNzYiLCJyb2xlIjoiRVZFTlRNQU5BR0VSIiwiaWF0IjoxNzYwODA5MjMyLCJleHAiOjE3NjA4OTU2MzJ9.brUL4UMYR9WBndt5ij7LoKJAeiQR9_yMu-9V-94Dc5k"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/dashboard/manager/registrations/{{registrationId}}/reject-cancel",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": [
+                "api",
+                "dashboard",
+                "manager",
+                "registrations",
+                "{{registrationId}}",
+                "reject-cancel"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🛠️ Admin Panel",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGYzY2JhNjNkMmYzOGE4MDVlYTUzNzUiLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3NjA4MDkyNTksImV4cCI6MTc2MDg5NTY1OX0.cpX7jp_FsU6Cgxuo_w_omDNwpwyzt3PAmNaZqtc2N5A"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/admin/dashboard",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "admin", "dashboard"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGYzY2JhNjNkMmYzOGE4MDVlYTUzNzUiLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3NjA4MDkyNTksImV4cCI6MTc2MDg5NTY1OX0.cpX7jp_FsU6Cgxuo_w_omDNwpwyzt3PAmNaZqtc2N5A"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/admin/users",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "admin", "users"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
