@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // =================================================================================================
 // Import các module cần thiết
 // =================================================================================================
@@ -18,17 +17,6 @@ import registrationRoutes from "./routes/registration.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import statisticsRoutes from "./routes/statistics.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
-=======
-import express from "express";
-import dotenv from "dotenv";
-import cors from "cors";
-import { connectDB } from "./config/db.js";
-import authRoutes from "./routes/auth.routes.js";
-import otpRoutes from "./routes/otp.routes.js";
-import adminRoutes from "./routes/admin.routes.js";
-import eventRoutes from './routes/event.routes.js';
-import registrationRoutes from "./routes/registration.routes.js";
->>>>>>> origin/main
 
 // =================================================================================================
 // Cấu hình và khởi tạo Express App
@@ -57,7 +45,6 @@ app.get("/", (req, res) => {
   res.send("✅ VolunteerHub Backend API is running...");
 });
 
-<<<<<<< HEAD
 // Gắn các routes vào ứng dụng với tiền tố tương ứng
 app.use("/api/auth", authRoutes); // Routes xác thực người dùng
 app.use("/api/otp", otpRoutes); // Routes quản lý OTP
@@ -67,14 +54,6 @@ app.use("/api/registrations", registrationRoutes); // Routes quản lý đăng k
 app.use("/api/dashboard", dashboardRoutes); // Routes cho dashboard
 app.use("/api/statistics", statisticsRoutes); // Routes cho thống kê
 app.use("/api/notifications", notificationRoutes); // Routes cho thông báo
-=======
-// ✅ Khai báo route API chính
-app.use("/api/auth", authRoutes);
-app.use("/api/otp", otpRoutes);
-app.use("/api/admin", adminRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/registrations', registrationRoutes);
->>>>>>> origin/main
 
 // =================================================================================================
 // Xử lý lỗi 404 - Route không tồn tại
