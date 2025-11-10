@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-<<<<<<< HEAD
 // Định nghĩa schema cho việc đăng ký sự kiện
 const registrationSchema = new mongoose.Schema(
   {
@@ -30,35 +29,11 @@ const registrationSchema = new mongoose.Schema(
   },
   { timestamps: true } // Tự động thêm createdAt và updatedAt
 );
-=======
-const registrationSchema = new mongoose.Schema({
-    event: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Event',
-        required: true,
-    },
-    volunteer: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected', 'completed'],
-        default: 'pending', // Mặc định chờ Manager duyệt
-    },
-}, { timestamps: true });
->>>>>>> origin/main
 
 // Ngăn một người đăng ký cùng một sự kiện nhiều lần
 registrationSchema.index({ event: 1, volunteer: 1 }, { unique: true });
 
-<<<<<<< HEAD
 // Tạo model Registration từ schema
 const Registration = mongoose.model("Registration", registrationSchema);
 // Xuất model để sử dụng ở nơi khác
 export default Registration;
-=======
-const Registration = mongoose.model('Registration', registrationSchema);
-export default Registration;
->>>>>>> origin/main
