@@ -10,7 +10,6 @@ import { connectDB } from "./config/db.js"; // Hàm kết nối đến MongoDB
 // Import các file routes
 // =================================================================================================
 import authRoutes from "./routes/auth.routes.js";
-import otpRoutes from "./routes/otp.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import eventRoutes from "./routes/event.routes.js";
 import registrationRoutes from "./routes/registration.routes.js";
@@ -47,7 +46,6 @@ app.get("/", (req, res) => {
 
 // Gắn các routes vào ứng dụng với tiền tố tương ứng
 app.use("/api/auth", authRoutes); // Routes xác thực người dùng
-app.use("/api/otp", otpRoutes); // Routes quản lý OTP
 app.use("/api/admin", adminRoutes); // Routes cho admin
 app.use("/api/events", eventRoutes); // Routes quản lý sự kiện
 app.use("/api/registrations", registrationRoutes); // Routes quản lý đăng ký
