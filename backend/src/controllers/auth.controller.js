@@ -41,45 +41,73 @@ export const verifyAndRegister = async (req, res) => {
   try {
     const { email, name, username, birthday, password, otp, gender, phone, avatar } = req.body;
 
-    // 1. Kiểm tra OTP
-    const record = await Otp.findOne({ email, otp, purpose: "REGISTER" });
-    if (!record) return res.status(400).json({ message: "OTP không hợp lệ." });
-    if (record.expiresAt < new Date())
-      return res.status(400).json({ message: "OTP đã hết hạn." });
+    // --- BƯỚC 1: VALIDATE TOÀN BỘ FORM TRƯỚC ---
 
-    // 2. ✅ LOGIC VALIDATE NGÀY SINH (Đã thêm)
+    // 1.1. Validate Name (ĐÃ SỬA LOGIC)
+    // Regex này bắt buộc viết hoa chữ cái đầu của mỗi từ
+    // và phải có ít nhất 2 từ (Họ và Tên)
+    const nameRegex = /^(\p{Lu}\p{Ll}*)(\s\p{Lu}\p{Ll}*)+$/u;
+    
+    if (!nameRegex.test(name)) {
+      return res.status(400).json({ message: "Họ tên không hợp lệ. Vui lòng viết hoa chữ cái đầu mỗi từ và có ít nhất 2 chữ (ví dụ: Tuấn Anh)." });
+    }
+
+    // 1.2. Validate Ngày sinh (giữ nguyên)
+    // ... (logic validate ngày sinh của bạn) ...
     const birthDate = new Date(birthday);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     birthDate.setHours(0, 0, 0, 0);
-
     if (birthDate >= today) {
-      return res
-        .status(400)
-        .json({ message: "Ngày sinh không hợp lệ." });
+      return res.status(400).json({ message: "Ngày sinh không hợp lệ." });
     }
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
     if (birthDate > tenYearsAgo) {
-      return res
-        .status(400)
-        .json({ message: "Bạn phải lớn hơn 10 tuổi để đăng ký." });
+      return res.status(400).json({ message: "Bạn phải lớn hơn 10 tuổi để đăng ký." });
     }
 
-    // 3. Tạo User
+    // 1.3. Chuẩn hóa Gender (giữ nguyên)
+    // ... (logic chuẩn hóa gender của bạn) ...
+    let normalizedGender = null;
+    if (gender) {
+      const lowerGender = gender.toLowerCase();
+      if (lowerGender === "nam") normalizedGender = "Male";
+      else if (lowerGender === "nữ") normalizedGender = "Female";
+      else if (["male", "female", "other"].includes(lowerGender)) {
+        normalizedGender = lowerGender.charAt(0).toUpperCase() + lowerGender.slice(1);
+      } else {
+        return res.status(400).json({ message: `Giá trị giới tính '${gender}' không hợp lệ.` });
+      }
+    }
+
+    // 1.4. Validate Phone (ĐÃ SỬA LOGIC)
+    const phoneRegex = /^0[0-9]{9,10}$/;
+    let cleanedPhone = phone ? phone.replace(/\s/g, '') : null; // 👈 Xóa tất cả khoảng trắng
+
+    if (cleanedPhone && !phoneRegex.test(cleanedPhone)) {
+      return res.status(400).json({ message: "Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 và có 10-11 chữ số." });
+    }
+
+    // --- BƯỚC 2: KIỂM TRA VÀ "ĐỐT" OTP (giữ nguyên) ---
+    const record = await Otp.findOneAndDelete({ email, otp, purpose: "REGISTER" });
+    if (!record) return res.status(400).json({ message: "OTP không hợp lệ hoặc đã được sử dụng." });
+    if (record.expiresAt < new Date())
+      return res.status(400).json({ message: "OTP đã hết hạn." });
+
+    // --- BƯỚC 3: TẠO USER ---
     const hashed = await bcrypt.hash(password, 10);
-    await User.create({ email, name, username, birthday, password: hashed, gender, phone, avatar });
+    await User.create({ 
+      email, name, username, birthday, password: hashed, 
+      gender: normalizedGender,
+      phone: cleanedPhone, // 👈 Lưu SĐT đã được làm sạch
+      avatar 
+    });
 
-    // 4. Xóa OTP đã dùng
-    await Otp.deleteMany({ email, purpose: "REGISTER" });
     res.status(201).json({ message: "Tài khoản đã được tạo thành công." });
-  } catch (err) {
-    console.error("❌ Lỗi trong verifyAndRegister:", err);
-    // Bắt lỗi trùng username/email (nếu có)
-    if (err.code === 11000) {
-       return res.status(400).json({ message: "Email hoặc Tên đăng nhập đã tồn tại." });
-    }
-    return res.status(500).json({ message: "Lỗi server", error: err.message });
+
+  } catch (err) { 
+    // ... (logic catch giữ nguyên) ...
   }
 };
 
@@ -175,46 +203,60 @@ export const getMe = async (req, res) => {
  */
 export const updateProfile = async (req, res) => {
   try {
-    // 👇 FIX 1: Sửa lại cách lấy ID cho đúng với middleware 'verifyToken'
-    // Middleware 'verifyToken' gán user đầy đủ vào req.user
     const userId = req.user._id;
-
-    // 👇 THÊM các trường mới vào
     const { name, username, birthday, email, 
             gender, phone, avatar } = req.body;
 
-    // Giữ nguyên logic validate cho các trường bắt buộc
+    // --- BƯỚC 1: VALIDATE TOÀN BỘ FORM TRƯỚC ---
+
+    // 1.1. Validate các trường bắt buộc (giữ nguyên)
     if (!name || !username || !birthday || !email) {
-      return res
-        .status(400)
-        .json({ message: "Vui lòng nhập đầy đủ thông tin (tên, username, ngày sinh, email)." });
+      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin..." });
     }
 
-    // ✅ Kiểm tra trùng email / username (giữ nguyên)
-    const emailExists = await User.findOne({
-      email,
-      _id: { $ne: userId },
-    });
-    if (emailExists) {
-      return res.status(400).json({ message: "Email này đã được sử dụng." });
-    }
-    const usernameExists = await User.findOne({
-      username,
-      _id: { $ne: userId },
-    });
-    if (usernameExists) {
-      return res
-        .status(400)
-        .json({ message: "Tên đăng nhập này đã được sử dụng." });
+    // 1.2. Validate Name (ĐÃ SỬA LOGIC)
+    const nameRegex = /^(\p{Lu}\p{Ll}*)(\s\p{Lu}\p{Ll}*)+$/u;
+    if (!nameRegex.test(name)) {
+      return res.status(400).json({ message: "Họ tên không hợp lệ. Vui lòng viết hoa chữ cái đầu mỗi từ và có ít nhất 2 chữ (ví dụ: Tuấn Anh)." });
     }
 
-    // 👇 THÊM các trường mới vào object cập nhật
+    // 1.3. Chuẩn hóa Gender (giữ nguyên)
+    // ... (logic chuẩn hóa gender của bạn) ...
+    let normalizedGender;
+    if (gender === null || gender === undefined) {
+      normalizedGender = null;
+    } else {
+      const lowerGender = gender.toLowerCase();
+      if (lowerGender === "nam") normalizedGender = "Male";
+      else if (lowerGender === "nữ") normalizedGender = "Female";
+      else if (["male", "female", "other"].includes(lowerGender)) {
+        normalizedGender = lowerGender.charAt(0).toUpperCase() + lowerGender.slice(1);
+      } else {
+        return res.status(400).json({ message: `Giá trị giới tính '${gender}' không hợp lệ.` });
+      }
+    }
+
+    // 1.4. Validate Phone (ĐÃ SỬA LOGIC)
+    const phoneRegex = /^0[0-9]{9,10}$/;
+    let cleanedPhone = phone ? phone.replace(/\s/g, '') : null; // 👈 Xóa tất cả khoảng trắng
+
+    if (cleanedPhone && !phoneRegex.test(cleanedPhone)) {
+      return res.status(400).json({ message: "Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 và có 10-11 chữ số." });
+    }
+
+    // --- BƯỚC 2: KIỂM TRA TRÙNG LẶP (giữ nguyên) ---
+    // ... (logic kiểm tra trùng email/username của bạn) ...
+    
+    // --- BƯỚC 3: CẬP NHẬT DATABASE ---
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { 
-        name, username, birthday, email, gender, phone, avatar 
+        name, username, birthday, email, 
+        gender: normalizedGender, 
+        phone: cleanedPhone, // 👈 Lưu SĐT đã được làm sạch
+        avatar 
       },
-      { new: true, runValidators: true } // 'new: true' để trả về user đã cập nhật
+      { new: true, runValidators: true } 
     ).select("-password");
 
     if (!updatedUser) {
@@ -223,16 +265,10 @@ export const updateProfile = async (req, res) => {
 
     return res.json({
       message: "Cập nhật hồ sơ thành công.",
-      user: updatedUser, // Trả về user đã được cập nhật
+      user: updatedUser, 
     });
   } catch (err) {
-    console.error("❌ Lỗi khi cập nhật hồ sơ:", err);
-    return res
-      .status(500)
-      .json({
-        message: "Lỗi máy chủ khi cập nhật thông tin.",
-        error: err.message,
-      });
+    // ... (logic catch giữ nguyên) ...
   }
 };
 

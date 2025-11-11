@@ -86,7 +86,7 @@ export default function Register() {
                 otp,
             });
             console.log(response);
-            if (response && response.status === 200) {
+            if (response && response.status === 201) {
                 Swal.fire({
                     title: "Đăng ký thành công!",
                     text: "Vui lòng đăng nhập để tiếp tục.",
@@ -100,8 +100,17 @@ export default function Register() {
                 Swal.fire("Không thành công", response.message || "Đăng ký thất bại. Vui lòng thử lại.", "error");
             }
         } catch (error) {
-            const errorMessage = error.response.data?.message || "Có lỗi xảy ra khi đăng ký. Vui lòng thử lại.";
-            Swal.fire("Không thành công", errorMessage, "error");
+            if (error.response) {
+                // Trường hợp 1: Server CÓ phản hồi (Lỗi 400, 404, 500...)
+                // Lấy message lỗi từ backend (ví dụ: "Email đã tồn tại")
+                const errorMessage = error.response.data?.message || "Đăng ký thất bại. Vui lòng thử lại.";
+                Swal.fire("Không thành công", errorMessage, "error");
+            } else {
+                // Trường hợp 2: Lỗi mạng (error.response là undefined)
+                // (Server backend sập, proxy sai, mất mạng...)
+                console.error("Network error:", error);
+                Swal.fire("Không thành công", "Không thể kết nối đến máy chủ. Vui lòng thử lại sau.", "error");
+            }
         }
     };
 

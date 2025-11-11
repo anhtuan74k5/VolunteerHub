@@ -1,9 +1,10 @@
 import axios from "axios";
-import { DOMAIN_BE, LOCALSTORAGE_USER } from "./Constants";
+//import { DOMAIN_BE, LOCALSTORAGE_USER } from "./Constants";
+import { LOCALSTORAGE_USER } from "./Constants";
 import { getLocalStorage } from "./Configs";
 
 export const http = axios.create({
-    baseURL: DOMAIN_BE,
+    //baseURL: DOMAIN_BE,
     timeout: 10000
 });
 
