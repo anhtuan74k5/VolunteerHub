@@ -17,6 +17,11 @@ import dashboardRoutes from "./routes/dashboard.routes.js";
 import statisticsRoutes from "./routes/statistics.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // =================================================================================================
 // Cấu hình và khởi tạo Express App
 // =================================================================================================
@@ -52,7 +57,8 @@ app.use("/api/registrations", registrationRoutes); // Routes quản lý đăng k
 app.use("/api/dashboard", dashboardRoutes); // Routes cho dashboard
 app.use("/api/statistics", statisticsRoutes); // Routes cho thống kê
 app.use("/api/notifications", notificationRoutes); // Routes cho thông báo
-
+// Tạo route ảo /uploads để trỏ vào thư mục /uploads thật
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // =================================================================================================
 // Xử lý lỗi 404 - Route không tồn tại
 // =================================================================================================

@@ -32,6 +32,12 @@ const eventSchema = new mongoose.Schema(
       default: "default-event-image.jpg",
     },
 
+    galleryImages: [
+      {
+        type: String,
+      },
+    ],
+
     // --- Trường Vận hành & Quản lý ---
     status: {
       // Dành cho Admin duyệt và quản lý vòng đời sự kiện
