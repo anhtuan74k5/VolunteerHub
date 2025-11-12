@@ -1,11 +1,25 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/user.js";
-import Otp from "../models/otp.js"; // 👈 Thêm import
-import { generateOtp } from "../utils/generateOtp.js"; // 👈 Thêm import
-import { sendOtpEmail } from "../utils/sendMail.js"; // 👈 Thêm import
+import Otp from "../models/otp.js";
+import { generateOtp } from "../utils/generateOtp.js";
+import { sendOtpEmail } from "../utils/sendMail.js";
+import fs from "fs";
+import path from "path";
 
-
+const rollbackUpload = (req) => {
+  if (req.file) {
+    const newAvatarPath = path.join(process.cwd(), req.file.path);
+    try {
+      if (fs.existsSync(newAvatarPath)) {
+        fs.unlinkSync(newAvatarPath);
+        console.log("Đã rollback (xóa) file upload do lỗi:", newAvatarPath);
+      }
+    } catch (unlinkErr) {
+      console.error("LỖI KHI ROLLBACK FILE:", unlinkErr.message);
+    }
+  }
+};
 // --- ĐĂNG KÝ (Sử dụng OTP) ---
 
 // 📩 Gửi OTP Đăng ký
@@ -39,7 +53,17 @@ export const sendRegisterOtp = async (req, res) => {
 // ✅ Xác thực OTP & Tạo tài khoản
 export const verifyAndRegister = async (req, res) => {
   try {
-    const { email, name, username, birthday, password, otp, gender, phone, avatar } = req.body;
+    const {
+      email,
+      name,
+      username,
+      birthday,
+      password,
+      otp,
+      gender,
+      phone,
+      avatar,
+    } = req.body;
 
     // --- BƯỚC 1: VALIDATE TOÀN BỘ FORM TRƯỚC ---
 
@@ -47,9 +71,12 @@ export const verifyAndRegister = async (req, res) => {
     // Regex này bắt buộc viết hoa chữ cái đầu của mỗi từ
     // và phải có ít nhất 2 từ (Họ và Tên)
     const nameRegex = /^(\p{Lu}\p{Ll}*)(\s\p{Lu}\p{Ll}*)+$/u;
-    
+
     if (!nameRegex.test(name)) {
-      return res.status(400).json({ message: "Họ tên không hợp lệ. Vui lòng viết hoa chữ cái đầu mỗi từ và có ít nhất 2 chữ (ví dụ: Tuấn Anh)." });
+      return res.status(400).json({
+        message:
+          "Họ tên không hợp lệ. Vui lòng viết hoa chữ cái đầu mỗi từ và có ít nhất 2 chữ (ví dụ: Tuấn Anh).",
+      });
     }
 
     // 1.2. Validate Ngày sinh (giữ nguyên)
@@ -64,7 +91,9 @@ export const verifyAndRegister = async (req, res) => {
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
     if (birthDate > tenYearsAgo) {
-      return res.status(400).json({ message: "Bạn phải lớn hơn 10 tuổi để đăng ký." });
+      return res
+        .status(400)
+        .json({ message: "Bạn phải lớn hơn 10 tuổi để đăng ký." });
     }
 
     // 1.3. Chuẩn hóa Gender (giữ nguyên)
@@ -75,42 +104,57 @@ export const verifyAndRegister = async (req, res) => {
       if (lowerGender === "nam") normalizedGender = "Male";
       else if (lowerGender === "nữ") normalizedGender = "Female";
       else if (["male", "female", "other"].includes(lowerGender)) {
-        normalizedGender = lowerGender.charAt(0).toUpperCase() + lowerGender.slice(1);
+        normalizedGender =
+          lowerGender.charAt(0).toUpperCase() + lowerGender.slice(1);
       } else {
-        return res.status(400).json({ message: `Giá trị giới tính '${gender}' không hợp lệ.` });
+        return res
+          .status(400)
+          .json({ message: `Giá trị giới tính '${gender}' không hợp lệ.` });
       }
     }
 
     // 1.4. Validate Phone (ĐÃ SỬA LOGIC)
     const phoneRegex = /^0[0-9]{9,10}$/;
-    let cleanedPhone = phone ? phone.replace(/\s/g, '') : null; // 👈 Xóa tất cả khoảng trắng
+    let cleanedPhone = phone ? phone.replace(/\s/g, "") : null; // 👈 Xóa tất cả khoảng trắng
 
     if (cleanedPhone && !phoneRegex.test(cleanedPhone)) {
-      return res.status(400).json({ message: "Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 và có 10-11 chữ số." });
+      return res.status(400).json({
+        message:
+          "Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 và có 10-11 chữ số.",
+      });
     }
 
     // --- BƯỚC 2: KIỂM TRA VÀ "ĐỐT" OTP (giữ nguyên) ---
-    const record = await Otp.findOneAndDelete({ email, otp, purpose: "REGISTER" });
-    if (!record) return res.status(400).json({ message: "OTP không hợp lệ hoặc đã được sử dụng." });
+    const record = await Otp.findOneAndDelete({
+      email,
+      otp,
+      purpose: "REGISTER",
+    });
+    if (!record)
+      return res
+        .status(400)
+        .json({ message: "OTP không hợp lệ hoặc đã được sử dụng." });
     if (record.expiresAt < new Date())
       return res.status(400).json({ message: "OTP đã hết hạn." });
 
     // --- BƯỚC 3: TẠO USER ---
     const hashed = await bcrypt.hash(password, 10);
-    await User.create({ 
-      email, name, username, birthday, password: hashed, 
+    await User.create({
+      email,
+      name,
+      username,
+      birthday,
+      password: hashed,
       gender: normalizedGender,
       phone: cleanedPhone, // 👈 Lưu SĐT đã được làm sạch
-      avatar 
+      avatar,
     });
 
     res.status(201).json({ message: "Tài khoản đã được tạo thành công." });
-
-  } catch (err) { 
+  } catch (err) {
     // ... (logic catch giữ nguyên) ...
   }
 };
-
 
 // --- ĐĂNG NHẬP VÀ QUẢN LÝ HỒ SƠ ---
 /**
@@ -163,10 +207,10 @@ export const login = async (req, res) => {
         birthday: user.birthday,
         role: user.role,
         status: user.status,
-        gender: user.gender,     
-        phone: user.phone,       
-        avatar: user.avatar,     
-        points: user.points,     
+        gender: user.gender,
+        phone: user.phone,
+        avatar: user.avatar,
+        points: user.points,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
@@ -191,7 +235,6 @@ export const getMe = async (req, res) => {
 
     // Chỉ cần trả về đối tượng 'req.user' đã được gán sẵn.
     return res.status(200).json(req.user);
-
   } catch (err) {
     console.error("❌ Lỗi trong getMe:", err);
     return res.status(500).json({ message: "Lỗi server", error: err.message });
@@ -200,79 +243,136 @@ export const getMe = async (req, res) => {
 
 /**
  * ✏️ Cập nhật thông tin người dùng hiện tại
+ * (Đã hoàn thiện - Hỗ trợ upload file avatar)
  */
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { name, username, birthday, email, 
-            gender, phone, avatar } = req.body;
+    const currentUser = req.user;
 
-    // --- BƯỚC 1: VALIDATE TOÀN BỘ FORM TRƯỚC ---
+    // --- BƯỚC 1: VALIDATE DỮ LIỆU TEXT TỪ REQ.BODY ---
+    const { name, birthday, gender, phone } = req.body;
 
-    // 1.1. Validate các trường bắt buộc (giữ nguyên)
-    if (!name || !username || !birthday || !email) {
-      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin..." });
+    // THAY ĐỔI: Thay vì 'return', chúng ta 'throw' lỗi 400
+    if (!name || !birthday) {
+      throw { status: 400, message: "Vui lòng nhập đầy đủ thông tin..." };
     }
 
-    // 1.2. Validate Name (ĐÃ SỬA LOGIC)
     const nameRegex = /^(\p{Lu}\p{Ll}*)(\s\p{Lu}\p{Ll}*)+$/u;
     if (!nameRegex.test(name)) {
-      return res.status(400).json({ message: "Họ tên không hợp lệ. Vui lòng viết hoa chữ cái đầu mỗi từ và có ít nhất 2 chữ (ví dụ: Tuấn Anh)." });
+      throw {
+        status: 400,
+        message:
+          "Họ tên không hợp lệ. Vui lòng viết hoa chữ cái đầu mỗi từ và có ít nhất 2 chữ (ví dụ: Tuấn Anh).",
+      };
     }
 
-    // 1.3. Chuẩn hóa Gender (giữ nguyên)
-    // ... (logic chuẩn hóa gender của bạn) ...
     let normalizedGender;
-    if (gender === null || gender === undefined) {
+    if (gender === null || gender === undefined || gender === "") {
       normalizedGender = null;
     } else {
       const lowerGender = gender.toLowerCase();
       if (lowerGender === "nam") normalizedGender = "Male";
       else if (lowerGender === "nữ") normalizedGender = "Female";
       else if (["male", "female", "other"].includes(lowerGender)) {
-        normalizedGender = lowerGender.charAt(0).toUpperCase() + lowerGender.slice(1);
+        normalizedGender =
+          lowerGender.charAt(0).toUpperCase() + lowerGender.slice(1);
       } else {
-        return res.status(400).json({ message: `Giá trị giới tính '${gender}' không hợp lệ.` });
+        throw {
+          status: 400,
+          message: `Giá trị giới tính '${gender}' không hợp lệ.`,
+        };
       }
     }
 
-    // 1.4. Validate Phone (ĐÃ SỬA LOGIC)
     const phoneRegex = /^0[0-9]{9,10}$/;
-    let cleanedPhone = phone ? phone.replace(/\s/g, '') : null; // 👈 Xóa tất cả khoảng trắng
+    let cleanedPhone = phone ? phone.replace(/\s/g, "") : null;
+    if (cleanedPhone === "") cleanedPhone = null;
 
     if (cleanedPhone && !phoneRegex.test(cleanedPhone)) {
-      return res.status(400).json({ message: "Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 và có 10-11 chữ số." });
+      throw {
+        status: 400,
+        message:
+          "Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 và có 10-11 chữ số.",
+      };
     }
 
-    // --- BƯỚC 2: KIỂM TRA TRÙNG LẶP (giữ nguyên) ---
-    // ... (logic kiểm tra trùng email/username của bạn) ...
-    
-    // --- BƯỚC 3: CẬP NHẬT DATABASE ---
+    // --- BƯỚC 2: CHUẨN BỊ DỮ LIỆU ĐỂ CẬP NHẬT ---
+    const updateData = {
+      name,
+      birthday,
+      gender: normalizedGender,
+      phone: cleanedPhone,
+    };
+
+    // --- BƯỚC 3: XỬ LÝ FILE AVATAR (NẾU CÓ) ---
+    // (Logic xóa ảnh cũ của bạn đã đúng)
+    if (req.file) {
+      updateData.avatar = `/uploads/avatars/${req.file.filename}`;
+      const defaultAvatar =
+        "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      if (
+        currentUser.avatar &&
+        currentUser.avatar !== defaultAvatar &&
+        !currentUser.avatar.startsWith("http")
+      ) {
+        const oldAvatarPath = path.join(process.cwd(), currentUser.avatar);
+        try {
+          if (fs.existsSync(oldAvatarPath)) {
+            fs.unlinkSync(oldAvatarPath);
+            console.log("Đã xóa avatar cũ:", oldAvatarPath);
+          }
+        } catch (unlinkErr) {
+          console.error("Lỗi khi xóa avatar cũ:", unlinkErr.message);
+        }
+      }
+    }
+
+    // --- BƯỚC 4: CẬP NHẬT DATABASE ---
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { 
-        name, username, birthday, email, 
-        gender: normalizedGender, 
-        phone: cleanedPhone, // 👈 Lưu SĐT đã được làm sạch
-        avatar 
-      },
-      { new: true, runValidators: true } 
+      { $set: updateData },
+      { new: true, runValidators: true }
     ).select("-password");
 
     if (!updatedUser) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+      // THAY ĐỔI: 'throw' lỗi 404
+      throw { status: 404, message: "Không tìm thấy người dùng." };
     }
 
+    // --- BƯỚC 5: TRẢ VỀ KẾT QUẢ THÀNH CÔNG ---
     return res.json({
       message: "Cập nhật hồ sơ thành công.",
-      user: updatedUser, 
+      user: updatedUser,
     });
   } catch (err) {
-    // ... (logic catch giữ nguyên) ...
+    // --- BƯỚC 6: KHỐI CATCH-ALL (BẮT TẤT CẢ LỖI) ---
+
+    // THAY ĐỔI QUAN TRỌNG:
+    // Luôn gọi rollback! Nếu req.file không tồn tại, hàm sẽ không làm gì.
+    // Nếu req.file tồn tại, nó sẽ bị xóa.
+    rollbackUpload(req);
+
+    // Xử lý lỗi 400/404/403 mà chúng ta đã 'throw'
+    if (err.status) {
+      return res.status(err.status).json({ message: err.message });
+    }
+
+    // Xử lý lỗi trùng lặp (từ DB)
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyValue)[0];
+      return res.status(409).json({
+        message: `Lỗi: ${
+          field === "email" ? "Email" : "Username"
+        } này đã được sử dụng.`,
+      });
+    }
+
+    // Các lỗi 500 khác
+    console.error("❌ Lỗi trong updateProfile:", err);
+    return res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
-
-
 // --- QUÊN MẬT KHẨU ---
 
 // 📩 Gửi OTP Reset Mật khẩu
@@ -307,9 +407,11 @@ export const resetPassword = async (req, res) => {
     if (!record) return res.status(400).json({ message: "OTP không hợp lệ." });
     if (record.expiresAt < new Date())
       return res.status(400).json({ message: "OTP đã hết hạn." });
-    
+
     if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
@@ -323,18 +425,16 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-
-
 /**
  * 🔒 Thay đổi mật khẩu (khi người dùng đã đăng nhập)
  */
 export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    
+
     // 1. Lấy userId từ middleware 'verifyToken'
     // Lưu ý: Dùng req.user._id (vì verifyToken mới đã gán đầy đủ user)
-    const userId = req.user._id; 
+    const userId = req.user._id;
 
     // 2. Kiểm tra dữ liệu đầu vào
     if (!oldPassword || !newPassword) {
@@ -351,7 +451,7 @@ export const changePassword = async (req, res) => {
 
     // 3. Lấy thông tin user (lần này cần lấy cả password)
     // .select('+password') là cần thiết nếu bạn đã ẩn password trong schema
-    const user = await User.findById(userId).select('+password');
+    const user = await User.findById(userId).select("+password");
     if (!user) {
       return res.status(404).json({ message: "Không tìm thấy người dùng." });
     }
