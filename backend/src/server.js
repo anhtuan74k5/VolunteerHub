@@ -16,6 +16,8 @@ import registrationRoutes from "./routes/registration.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import statisticsRoutes from "./routes/statistics.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import postRoutes from "./routes/post.routes.js";
+import commentRoutes from "./routes/comment.routes.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -54,6 +56,8 @@ app.use("/api/auth", authRoutes); // Routes xác thực người dùng
 app.use("/api/admin", adminRoutes); // Routes cho admin
 app.use("/api/events", eventRoutes); // Routes quản lý sự kiện
 app.use("/api/registrations", registrationRoutes); // Routes quản lý đăng ký
+app.use("/api/posts", postRoutes); // Routes cho Post
+app.use("/api/comments", commentRoutes); // Routes cho Comment
 app.use("/api/dashboard", dashboardRoutes); // Routes cho dashboard
 app.use("/api/statistics", statisticsRoutes); // Routes cho thống kê
 app.use("/api/notifications", notificationRoutes); // Routes cho thông báo

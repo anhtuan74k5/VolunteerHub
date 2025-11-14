@@ -46,3 +46,37 @@ export const eventManager = (req, res, next) => {
         res.status(403).json({ message: 'Forbidden: Yêu cầu quyền Quản lý Sự kiện' });
     }
 };
+
+// Thêm import ở đầu file
+import Registration from '../models/registration.js';
+
+// ... (code của verifyToken, admin, eventManager) ...
+
+// 🛡️ Middleware kiểm tra xem user có phải là thành viên đã được duyệt của sự kiện không
+export const isEventMember = async (req, res, next) => {
+  try {
+    const eventId = req.params.eventId || req.body.eventId; // Lấy eventId từ param hoặc body
+    const userId = req.user._id;
+
+    // Kiểm tra xem có phải Manager của sự kiện không (Manager luôn có quyền)
+    if (req.user.role === 'EVENTMANAGER' || req.user.role === 'ADMIN') {
+        return next(); 
+    }
+
+    // Kiểm tra xem có phải là Volunteer đã được 'approved'
+    const registration = await Registration.findOne({
+      event: eventId,
+      volunteer: userId,
+      status: 'approved',
+    });
+
+    if (registration) {
+      return next(); // Là thành viên, cho phép
+    }
+
+    res.status(403).json({ message: 'Forbidden: Bạn phải là thành viên đã được duyệt của sự kiện này.' });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi server', error: error.message });
+  }
+};
