@@ -10,7 +10,7 @@ export const getPendingEvents = async (req, res) => {
   try {
     const events = await Event.find({ status: "pending" }).populate(
       "createdBy",
-      "name email"
+      "name email phone"
     );
     res.status(200).json(events);
   } catch (error) {
@@ -75,8 +75,59 @@ export const updateUserStatus = async (req, res) => {
   }
 };
 
-// --- XUẤT DỮ LIỆU ---
+/**
+ * [PUT] /api/admin/users/:id/role -> Admin thay đổi vai trò người dùng
+ */
+export const updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body; // Vai trò mới: "VOLUNTEER", "EVENTMANAGER", "ADMIN"
+    const userIdToUpdate = req.params.id;
+    const adminId = req.user._id.toString(); // Lấy ID của Admin đang thao tác
 
+    // 1. Validate dữ liệu đầu vào
+    if (!role) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng cung cấp vai trò mới." });
+    }
+
+    // 2. Kiểm tra vai trò có hợp lệ không (dựa trên enum của model 'user.js')
+    const validRoles = ["VOLUNTEER", "EVENTMANAGER", "ADMIN"];
+    if (!validRoles.includes(role.toUpperCase())) {
+      return res
+        .status(400)
+        .json({ message: `Vai trò '${role}' không hợp lệ.` });
+    }
+
+    // 3. Ngăn Admin tự thay đổi vai trò của chính mình
+    if (userIdToUpdate === adminId) {
+      return res.status(400).json({
+        message: "Admin không thể tự thay đổi vai trò của chính mình.",
+      });
+    }
+
+    // 4. Tìm và cập nhật người dùng
+    const updatedUser = await User.findByIdAndUpdate(
+      userIdToUpdate,
+      { role: role.toUpperCase() }, // Cập nhật vai trò
+      { new: true, runValidators: true } // runValidators để kiểm tra enum
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    }
+
+    // 5. Trả về kết quả
+    res.status(200).json({
+      message: "Cập nhật vai trò người dùng thành công.",
+      user: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+// --- XUẤT DỮ LIỆU ---
 // [GET] /api/admin/export/users -> Xuất file CSV người dùng
 export const exportUsers = async (req, res) => {
   try {
@@ -120,7 +171,7 @@ export const getDashboardStats = async (req, res) => {
 export const getAllSystemEvents = async (req, res) => {
   try {
     const events = await Event.find({}) // Lấy TẤT CẢ sự kiện
-      .populate("createdBy", "name email") // Ghép thông tin người quản lý
+      .populate("createdBy", "name email phone") // Ghép thông tin người quản lý
       .sort({ createdAt: -1 });
 
     res.status(200).json(events);
