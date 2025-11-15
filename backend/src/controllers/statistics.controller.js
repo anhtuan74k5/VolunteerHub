@@ -211,7 +211,7 @@ export const getAllEventsForAllUsers = async (req, res) => {
     // 📌 Lấy toàn bộ sự kiện từ database, sắp xếp theo thời gian
     const events = await Event.find({})
       .sort({ date: -1 }) // Sự kiện gần nhất lên đầu
-      .populate("createdBy", "name email role") // Gắn thông tin người tạo
+      .populate("createdBy", "name email phone role ") // Gắn thông tin người tạo
       .lean();
 
     if (!events.length) {

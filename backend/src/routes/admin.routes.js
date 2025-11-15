@@ -9,6 +9,7 @@ import {
   updateUserStatus,
   exportUsers,
   getDashboardStats,
+  updateUserRole,
 } from "../controllers/admin.controller.js";
 
 const router = express.Router();
@@ -45,6 +46,10 @@ router.get("/users", getAllUsers);
 // [PUT] /api/admin/users/:id/status
 // Cập nhật trạng thái của người dùng (ví dụ: "ACTIVE" hoặc "LOCKED")
 router.put("/users/:id/status", updateUserStatus);
+
+// [PUT] /api/admin/users/:id/role
+// Cập nhật vai trò (phân quyền) cho người dùng
+router.put("/users/:id/role", updateUserRole);
 
 // --- Route cho Xuất Dữ liệu ---
 

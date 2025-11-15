@@ -7,11 +7,10 @@ import {
   createEvent,
   updateEvent,
   deleteEvent,
-} from "../controllers/event.controller.js";
-import {
   getApprovedEvents,
   getEventDetails,
   getMyEvents,
+  completeEvent,
 } from "../controllers/event.controller.js";
 
 const router = express.Router();
@@ -47,4 +46,9 @@ router.put("/:id", verifyToken, eventManager, uploadEventImages, updateEvent);
 // [DELETE] /api/events/:id
 // Xóa một sự kiện (manager chỉ có thể xóa sự kiện của mình)
 router.delete("/:id", verifyToken, eventManager, deleteEvent);
+
+// [PUT] /api/events/:id/complete
+// Đánh dấu một sự kiện là đã hoàn thành
+router.put("/:id/complete", verifyToken, eventManager, completeEvent);
+
 export default router;

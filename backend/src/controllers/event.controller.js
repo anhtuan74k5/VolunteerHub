@@ -42,6 +42,7 @@ const eventSchema = Joi.object({
   name: Joi.string().min(3).required(),
   description: Joi.string().min(10).required(),
   date: Joi.date().iso().required(),
+  endDate: Joi.date().iso().required().greater(Joi.ref("date")),
   location: Joi.string().required(),
   category: Joi.string().required(),
 });
@@ -247,6 +248,58 @@ export const deleteEvent = async (req, res) => {
   }
 };
 
+/**
+ * [PUT] /api/events/:id/complete -> Manager đánh dấu sự kiện là hoàn thành
+ */
+export const completeEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+
+    // --- BƯỚC 1: TÌM SỰ KIỆN ---
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    }
+
+    // --- BƯỚC 2: KIỂM TRA QUYỀN (Chủ sở hữu) ---
+    if (event.createdBy.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền cập nhật sự kiện này" });
+    }
+
+    // --- BƯỚC 3: KIỂM TRA NGHIỆP VỤ ---
+
+    // Chỉ có thể hoàn thành một sự kiện đã được 'approved'
+    if (event.status !== "approved") {
+      return res.status(400).json({
+        message: `Không thể hoàn thành. Sự kiện đang ở trạng thái '${event.status}'.`,
+      });
+    }
+
+    // Kiểm tra an toàn: Không cho phép hoàn thành sự kiện chưa diễn ra
+    const now = new Date();
+    if (now < new Date(event.date)) {
+      return res.status(400).json({ message: "Sự kiện này chưa diễn ra." });
+    }
+
+    // --- BƯỚC 4: CẬP NHẬT DATABASE ---
+    // Cập nhật status VÀ endDate như yêu cầu của bạn
+    event.status = "completed";
+    event.endDate = now; // Cập nhật ngày kết thúc là "ngay bây giờ"
+
+    await event.save(); // Lưu thay đổi
+
+    // --- BƯỚC 5: TRẢ KẾT QUẢ ---
+    res
+      .status(200)
+      .json({ message: "Sự kiện đã được đánh dấu hoàn thành.", event: event });
+  } catch (err) {
+    console.error("❌ Lỗi trong completeEvent:", err);
+    res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
 // [GET] /api/events/public -> Lấy danh sách sự kiện đã được duyệt
 export const getApprovedEvents = async (req, res) => {
   try {
@@ -266,7 +319,7 @@ export const getApprovedEvents = async (req, res) => {
 
     const events = await Event.find(filter)
       .sort({ date: 1 })
-      .populate("createdBy", "name"); // Lấy tên người tạo
+      .populate("createdBy", "name email phone"); // Lấy tên người tạo
 
     res.status(200).json(events);
   } catch (error) {
@@ -280,7 +333,7 @@ export const getEventDetails = async (req, res) => {
     const event = await Event.findOne({
       _id: req.params.id,
       status: "approved",
-    }).populate("createdBy", "name");
+    }).populate("createdBy", "name email phone");
 
     if (!event) {
       return res.status(404).json({
