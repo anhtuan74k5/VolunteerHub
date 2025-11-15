@@ -11,6 +11,7 @@ import {
   getEventDetails,
   getMyEvents,
   completeEvent,
+  getEventParticipantss,
 } from "../controllers/event.controller.js";
 
 const router = express.Router();
@@ -50,5 +51,9 @@ router.delete("/:id", verifyToken, eventManager, deleteEvent);
 // [PUT] /api/events/:id/complete
 // Đánh dấu một sự kiện là đã hoàn thành
 router.put("/:id/complete", verifyToken, eventManager, completeEvent);
+
+// [GET] /api/events/public/:id/participants
+// Lấy danh sách (công khai) những ai đã được duyệt tham gia
+router.get("/public/:id/participants", getEventParticipants);
 
 export default router;
