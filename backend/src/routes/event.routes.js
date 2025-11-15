@@ -11,7 +11,7 @@ import {
   getEventDetails,
   getMyEvents,
   completeEvent,
-  getEventParticipantss,
+  getEventParticipants,
 } from "../controllers/event.controller.js";
 
 const router = express.Router();
