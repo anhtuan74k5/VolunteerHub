@@ -9,6 +9,7 @@ export const registerForEvent = async (req, res) => {
     const eventId = req.params.eventId;
     const volunteerId = req.user._id;
 
+    // 1. Kiểm tra sự kiện
     const event = await Event.findById(eventId);
     if (!event || event.status !== "approved") {
       return res
@@ -16,17 +17,30 @@ export const registerForEvent = async (req, res) => {
         .json({ message: "Sự kiện không tồn tại hoặc chưa được duyệt." });
     }
 
+    // 2. 👇 KIỂM TRA SỐ LƯỢNG
+    // Đếm số lượng người đã đăng ký (cả 'pending' và 'approved')
+    const currentParticipants = await Registration.countDocuments({
+      event: eventId,
+      status: { $in: ["approved", "pending"] }, // Đếm cả 2 trạng thái
+    });
+
+    if (currentParticipants >= event.maxParticipants) {
+      return res.status(409).json({
+        // 409 Conflict
+        message: "Rất tiếc, sự kiện này đã đủ số lượng người tham gia.",
+      });
+    }
+
+    // 3. Tạo đăng ký mới (Giữ nguyên)
     const newRegistration = new Registration({
       event: eventId,
       volunteer: volunteerId,
     });
     await newRegistration.save();
-    res
-      .status(201)
-      .json({
-        message: "Đăng ký thành công, vui lòng chờ duyệt",
-        registration: newRegistration,
-      });
+    res.status(201).json({
+      message: "Đăng ký thành công, vui lòng chờ duyệt",
+      registration: newRegistration,
+    });
   } catch (error) {
     if (error.code === 11000) {
       return res
@@ -90,12 +104,10 @@ export const updateRegistrationStatus = async (req, res) => {
       { status },
       { new: true }
     );
-    res
-      .status(200)
-      .json({
-        message: "Cập nhật trạng thái thành công",
-        registration: updatedReg,
-      });
+    res.status(200).json({
+      message: "Cập nhật trạng thái thành công",
+      registration: updatedReg,
+    });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
@@ -109,12 +121,10 @@ export const markAsCompleted = async (req, res) => {
       { status: "completed" },
       { new: true }
     );
-    res
-      .status(200)
-      .json({
-        message: "Đánh dấu hoàn thành thành công",
-        registration: updatedReg,
-      });
+    res.status(200).json({
+      message: "Đánh dấu hoàn thành thành công",
+      registration: updatedReg,
+    });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }

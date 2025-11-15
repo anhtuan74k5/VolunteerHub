@@ -25,10 +25,13 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
     category: {
-      // Dành cho Tình nguyện viên lọc sự kiện
       type: String,
       required: true,
-      // Optional: type: mongoose.Schema.Types.ObjectId, ref: 'Category' nếu bạn muốn làm model Category riêng
+    },
+    maxParticipants: {
+      type: Number,
+      required: true,
+      min: 1, // Ít nhất phải cho 1 người tham gia
     },
     coverImage: {
       // Ảnh bìa sự kiện
