@@ -3,7 +3,7 @@ import Event from "../models/event.js";
 import Joi from "joi";
 import fs from "fs";
 import path from "path";
-
+import Registration from "../models/registration.js";
 // HÀM HỖ TRỢ (HELPER) ĐỂ DỌN DẸP FILE CỦA EVENT
 // Chúng ta cần hàm riêng vì event có nhiều file (coverImage, galleryImages)
 const rollbackEventUploads = (req) => {
@@ -355,6 +355,46 @@ export const getMyEvents = async (req, res) => {
     }); // Sắp xếp mới nhất lên đầu
 
     res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+/**
+ * [GET] /api/events/public/:id/participants -> Lấy danh sách người tham gia (công khai)
+ */
+export const getEventParticipants = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+
+    // 1. Kiểm tra xem sự kiện có tồn tại và đã được duyệt không
+    const event = await Event.findOne({
+      _id: eventId,
+      status: "approved",
+    }).select("_id"); // Chỉ cần kiểm tra sự tồn tại
+
+    if (!event) {
+      return res.status(404).json({
+        message: "Không tìm thấy sự kiện hoặc sự kiện chưa được duyệt.",
+      });
+    }
+
+    // 2. Lấy danh sách người tham gia đã được "approved"
+    // Chúng ta chỉ lấy những ai đã được Manager duyệt
+    const registrations = await Registration.find({
+      event: eventId,
+      status: "approved", // Chỉ hiển thị ai đã được duyệt
+    })
+      .select("volunteer") // Chỉ lấy trường volunteer
+      .populate("volunteer", "name email phone"); // Lấy thông tin CÔNG KHAI
+
+    // 3. Trích xuất thông tin user (thay vì trả về object Registration)
+    const participants = registrations.map((reg) => reg.volunteer);
+
+    res.status(200).json({
+      total: participants.length,
+      participants: participants,
+    });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
