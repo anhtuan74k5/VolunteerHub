@@ -4,6 +4,7 @@ import { verifyToken } from "../middlewares/auth.js";
 import {
   getMyNotifications,
   markAsRead,
+  subscribe,
 } from "../controllers/notification.controller.js";
 
 const router = express.Router();
@@ -20,4 +21,5 @@ router.get("/", verifyToken, getMyNotifications);
 // ✔️ Đánh dấu một thông báo cụ thể là đã đọc
 router.put("/:id/read", verifyToken, markAsRead);
 
+router.post("/subscribe", verifyToken, subscribe);
 export default router;
