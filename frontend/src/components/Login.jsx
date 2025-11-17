@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
-import { closeModal, openRegister, loginSuccess } from "../redux/reducers/UserReducer";
+import { closeModal, openRegister, loginSuccess, openForgetPassword } from "../redux/reducers/UserReducer";
 import { User, Lock } from "lucide-react";
 import Swal from "sweetalert2";
 import { DangNhap } from "../services/UserService";
@@ -8,7 +8,6 @@ import { useEffect } from "react";
 
 export default function Login() {
     const dispatch = useDispatch();
-
     useEffect(() => {
         document.body.style.overflow = "hidden";
         return () => {
@@ -40,17 +39,19 @@ export default function Login() {
                 password: form.password,
             });
 
-            const { user, accessToken } = response.data;
+            const { user, token } = response.data;
             if (form.remember) {
                 localStorage.setItem("rememberedUsername", form.identifier);
             } else {
                 localStorage.removeItem("rememberedUsername");
             }
 
-            localStorage.setItem("user", JSON.stringify({ ...user, accessToken }));
+            localStorage.setItem("user", JSON.stringify({ ...user, token }));
 
-            dispatch(loginSuccess({ user, token: accessToken }));
+            dispatch(loginSuccess({ user, token: token }));
             dispatch(closeModal());
+            // navigate('hoat-dong');
+
             Swal.fire({
                 icon: "success",
                 title: "Đăng nhập thành công",
@@ -76,7 +77,7 @@ export default function Login() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 min-h-screen">
             <div className="bg-white rounded-lg shadow-xl w-[520px] overflow-hidden">
                 {/* Header */}
-                <div className="bg-[#2d2d3a] flex justify-between items-center px-5 py-3">
+                <div className="bg-[#2d2d3a] flex justify-between items-center px-5 py-5">
                     <h2 className="text-2xl font-bold text-[#e6c675]">Đăng Nhập Tài Khoản</h2>
                     <button
                         onClick={() => dispatch(closeModal())}
@@ -142,14 +143,24 @@ export default function Login() {
                     </div>
 
                     {/* Chuyển sang đăng ký */}
-                    <p className="text-center text-gray-700 text-sm">
-                        Bạn chưa có tài khoản?{" "}
+                    <p className="flex justify-between text-gray-700 text-sm">
+                        <span>
+                            Bạn chưa có tài khoản?{" "}
+                            <button
+                                type="button"
+                                onClick={() => dispatch(openRegister())}
+                                className="text-blue-600 font-medium hover:underline"
+                            >
+                                Đăng ký ngay
+                            </button>
+                        </span>
+
                         <button
                             type="button"
-                            onClick={() => dispatch(openRegister())}
-                            className="text-blue-600 hover:underline"
+                            onClick={() => dispatch(openForgetPassword())}
+                            className="text-blue-600 font-medium hover:underline"
                         >
-                            Đăng ký ngay
+                            Quên mật khẩu?
                         </button>
                     </p>
                 </form>

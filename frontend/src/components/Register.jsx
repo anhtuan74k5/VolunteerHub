@@ -1,11 +1,10 @@
-import React, { useState } from "react";
-import { User, Lock, Mail, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Lock, Mail, Calendar, Phone, Image } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { closeModal, openLogin } from "../redux/reducers/UserReducer";
 import Swal from "sweetalert2";
 import { DangKy, OTPDangKy } from "../services/UserService";
-import { useEffect } from "react";
-import otp from "../assets/img/otp3.png";
+import otp from "../assets/img/Icon_Otp.png";
 
 export default function Register() {
     const dispatch = useDispatch();
@@ -20,13 +19,15 @@ export default function Register() {
     const [form, setForm] = useState({
         name: "",
         birthday: "",
+        gender: "",
+        phone: "",
         email: "",
         username: "",
         password: "",
         confirmPassword: "",
         otp: "",
+        avatar: "",
     });
-
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -49,43 +50,35 @@ export default function Register() {
                 Swal.fire("Không thành công", errorMessage, "error");
             }
         } catch (error) {
-            if (error.response) {
-                const errorMessage = error.response.data?.message || "Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại.";
-                Swal.fire("Không thành công", errorMessage, "error");
-            } else {
-                console.error("Network error:", error);
-                Swal.fire("Không thành công", "Không thể kết nối đến server. Vui lòng thử lại.", "error");
-            }
+            const errorMessage =
+                error.response?.data?.message || "Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại.";
+            Swal.fire("Không thành công", errorMessage, "error");
         }
     };
-
-
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const { name, birthday, email, username, password, confirmPassword, otp } = form;
+        // Chuyển đổi giới tính
+        const { gender, ...restForm } = form;
+        const mappedGender = gender === "Nam" ? "Male" : gender === "Nữ" ? "Female" : gender;
 
-        if (!name || !birthday || !email || !username || !password || !confirmPassword || !otp) {
+        // Cập nhật lại gender sau khi chuyển đổi
+        const formData = { ...restForm, gender: mappedGender };
+
+        // Kiểm tra dữ liệu
+        if (!formData.name || !formData.birthday || !formData.gender || !formData.phone || !formData.email || !formData.username || !formData.password || !formData.confirmPassword || !formData.otp) {
             Swal.fire("Không thành công", "Vui lòng điền đầy đủ thông tin.", "error");
             return;
         }
 
-        if (password !== confirmPassword) {
+        if (formData.password !== formData.confirmPassword) {
             Swal.fire("Mật khẩu không khớp", "Vui lòng kiểm tra lại.", "error");
             return;
         }
 
         try {
-            const response = await DangKy({
-                name,
-                birthday,
-                email,
-                username,
-                password,
-                otp,
-            });
-            console.log(response);
+            const response = await DangKy(formData);
             if (response && response.status === 201) {
                 Swal.fire({
                     title: "Đăng ký thành công!",
@@ -100,25 +93,16 @@ export default function Register() {
                 Swal.fire("Không thành công", response.message || "Đăng ký thất bại. Vui lòng thử lại.", "error");
             }
         } catch (error) {
-            if (error.response) {
-                // Trường hợp 1: Server CÓ phản hồi (Lỗi 400, 404, 500...)
-                // Lấy message lỗi từ backend (ví dụ: "Email đã tồn tại")
-                const errorMessage = error.response.data?.message || "Đăng ký thất bại. Vui lòng thử lại.";
-                Swal.fire("Không thành công", errorMessage, "error");
-            } else {
-                // Trường hợp 2: Lỗi mạng (error.response là undefined)
-                // (Server backend sập, proxy sai, mất mạng...)
-                console.error("Network error:", error);
-                Swal.fire("Không thành công", "Không thể kết nối đến máy chủ. Vui lòng thử lại sau.", "error");
-            }
+            const errorMessage = error.response?.data?.message || "Có lỗi xảy ra khi đăng ký. Vui lòng thử lại.";
+            Swal.fire("Không thành công", errorMessage, "error");
         }
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 min-h-screen">
-            <div className="bg-white rounded-lg shadow-xl w-[520px] overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xl w-[540px] overflow-hidden">
                 {/* Header */}
-                <div className="bg-[#2d2d3a] flex justify-between items-center px-5 py-3">
+                <div className="bg-[#2d2d3a] flex justify-between items-center px-5 py-5">
                     <h2 className="text-2xl font-bold text-[#e6c675]">Đăng Ký Tài Khoản</h2>
                     <button
                         onClick={() => dispatch(closeModal())}
@@ -129,10 +113,11 @@ export default function Register() {
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6">
-                    {/* Name */}
-                    <div className="mb-4 flex space-x-4">
-                        <div className="w-1/2">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+                    {/* Họ tên + Ngày sinh + Giới tính */}
+                    <div className="flex space-x-4">
+                        <div className="w-3/5">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <User size={18} /> Họ và tên:
                             </label>
@@ -141,13 +126,12 @@ export default function Register() {
                                 name="name"
                                 value={form.name}
                                 onChange={handleChange}
-                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
+                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
                                 required
                             />
                         </div>
 
-                        {/* Birth */}
-                        <div className="w-1/2">
+                        <div className="w-2/5">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <Calendar size={18} /> Ngày sinh:
                             </label>
@@ -156,60 +140,120 @@ export default function Register() {
                                 name="birthday"
                                 value={form.birthday}
                                 onChange={handleChange}
-                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
+                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-[7px] focus:ring-2 focus:ring-blue-400 text-black"
+                                required
+                            />
+                        </div>
+
+                        <div className="w-1/5">
+                            <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
+                                Giới tính:
+                            </label>
+                            <select
+                                name="gender"
+                                value={form.gender}
+                                onChange={handleChange}
+                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-2 py-2 text-black focus:ring-2 focus:ring-blue-400"
+                                required
+                            >
+                                <option value="">---</option>
+                                <option value="Nam">Nam</option>
+                                <option value="Nữ">Nữ</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Tên đăng nhập + Số điện thoại */}
+                    <div className="flex space-x-4">
+                        <div className="w-1/2">
+                            <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
+                                <User size={18} /> Tên đăng nhập:
+                            </label>
+                            <input
+                                type="text"
+                                name="username"
+                                value={form.username}
+                                onChange={handleChange}
+                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
+                                required
+                            />
+                        </div>
+
+                        <div className="w-1/2">
+                            <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
+                                <Phone size={18} /> Số điện thoại:
+                            </label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                value={form.phone}
+                                onChange={handleChange}
+                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
                                 required
                             />
                         </div>
                     </div>
 
-                    {/* Username */}
-                    <div className="mb-4">
+                    {/* Mật khẩu + Xác nhận mật khẩu */}
+                    <div className="flex space-x-4">
+                        <div className="w-1/2">
+                            <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
+                                <Lock size={18} /> Mật khẩu:
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                value={form.password}
+                                onChange={handleChange}
+                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
+                                required
+                            />
+                        </div>
+
+                        <div className="w-1/2">
+                            <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
+                                <Lock size={18} /> Nhập lại mật khẩu:
+                            </label>
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                value={form.confirmPassword}
+                                onChange={handleChange}
+                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {/* Avatar */}
+                    <div>
                         <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
-                            <User size={18} /> Tên đăng nhập:
+                            <Image size={18} /> Ảnh đại diện (URL):
                         </label>
                         <input
                             type="text"
-                            name="username"
-                            value={form.username}
+                            name="avatar"
+                            value={form.avatar}
                             onChange={handleChange}
-                            className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
-                            required
+                            placeholder="Dán đường dẫn hình ảnh vào đây"
+                            className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
                         />
+                        {form.avatar && (
+                            <div className="mt-2 flex justify-center">
+                                <img
+                                    src={form.avatar}
+                                    alt="Avatar preview"
+                                    onError={(e) => (e.target.style.display = "none")}
+                                    className="w-24 h-24 rounded-full object-cover border border-gray-300 shadow-sm"
+                                />
+                            </div>
+                        )}
                     </div>
 
-                    {/* Password */}
-                    <div className="mb-4">
-                        <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
-                            <Lock size={18} /> Mật khẩu:
-                        </label>
-                        <input
-                            type="password"
-                            name="password"
-                            value={form.password}
-                            onChange={handleChange}
-                            className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
-                            required
-                        />
-                    </div>
-
-                    {/* RePassword */}
-                    <div className="mb-5">
-                        <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
-                            <Lock size={18} /> Xác nhận mật khẩu:
-                        </label>
-                        <input
-                            type="password"
-                            name="confirmPassword"
-                            value={form.confirmPassword}
-                            onChange={handleChange}
-                            className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
-                            required
-                        />
-                    </div>
-
-                    {/* Email and OTP */}
+                    {/* Email + OTP */}
                     <div className="flex gap-4">
-                        <div className="mb-4">
+                        <div className="w-[300px]">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <Mail size={18} /> Email:
                             </label>
@@ -218,51 +262,46 @@ export default function Register() {
                                 name="email"
                                 value={form.email}
                                 onChange={handleChange}
-                                className="w-[300px] bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
+                                className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
                                 required
                             />
                         </div>
-                        <div className="mb-4">
-                            <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
-                                OTP:
-                            </label>
+
+                        <div className="flex-1">
+                            <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">OTP:</label>
                             <div className="relative">
                                 <input
                                     type="text"
                                     name="otp"
+                                    placeholder="Ấn gửi OTP"
                                     value={form.otp}
                                     onChange={handleChange}
-                                    className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
+                                    className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
                                     required
                                 />
                                 <button
                                     type="button"
                                     onClick={handleSendOtp}
-                                    className="absolute right-0 top-1/2 transform -translate-y-1/2 text-[#1B1B26] hover:bg-[#CDA550] text-sm h-full bg-[#DCBA58] rounded-r-md px-1 border-t border-r border-b border-gray-300 "
+                                    className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-[#DCBA58] hover:bg-[#CDA550] text-[#1B1B26] text-sm h-full rounded-r-md px-2 border border-gray-300 flex items-center justify-center"
                                 >
-                                    <img
-                                        src={otp}
-                                        alt="Gửi Otp"
-                                        className="w-[40px]"
-                                    />
+                                    <img src={otp} alt="Gửi Otp" className="w-[36px]" />
                                 </button>
                             </div>
                         </div>
                     </div>
 
-
                     {/* Submit */}
-                    <div className="flex justify-center mb-4 pt-1">
+                    <div className="flex justify-center pt-1">
                         <button
                             type="submit"
-                            className="bg-[#2d2d3a] text-white font-semibold py-3 rounded-md hover:bg-[#1f1f2b] transition-colors w-[480px] "
+                            className="bg-[#2d2d3a] text-white font-semibold py-3 rounded-md hover:bg-[#1f1f2b] transition-colors w-full"
                         >
                             Đăng Ký
                         </button>
                     </div>
 
                     {/* Switch to login */}
-                    <div className="text-left pt-2">
+                    <div className="text-center pt-2">
                         <p className="text-sm text-gray-700">
                             Đã có tài khoản?{" "}
                             <button
@@ -277,7 +316,6 @@ export default function Register() {
                             </button>
                         </p>
                     </div>
-
                 </form>
             </div>
         </div>

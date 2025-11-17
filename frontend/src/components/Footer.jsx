@@ -1,9 +1,8 @@
-import React from "react";
 import { Facebook, Twitter, Instagram } from "lucide-react";
 
-const Footer = () => {
+export default function Footer() {
     return (
-        <footer className="bg-gray-900 text-gray-200 py-4 shadow-inner">
+        <footer className="bg-gray-900 text-gray-200 py-4 shadow-inner z-10">
             <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
                 {/* Bản quyền */}
                 <p className="text-sm text-center md:text-left mb-2 md:mb-0">
@@ -43,6 +42,5 @@ const Footer = () => {
             </div>
         </footer>
     );
-};
+}
 
-export default Footer;

@@ -1,29 +1,31 @@
-import React, { useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import dhcn from "../assets/img/DHCN2.png";
+import dhcn from "../assets/img/Truong_DHCN.png";
+import logoUet from "../assets/img/Logo_UET.webp";
+import logoDoan from "../assets/img/Logo_Doan.webp";
+import logoHsv from "../assets/img/Logo_Hsv.webp";
 import Login from "./Login";
 import Register from "./Register";
+import ForgetPassword from "./ForgetPassword";
 import { useDispatch, useSelector } from "react-redux";
 import { openLogin, logout } from "../redux/reducers/UserReducer";
 import { Dropdown, Menu } from "antd";
-import { getLocalStorage, removeLocalStorage, SwalConfig } from "../utils/Configs";
+import { removeLocalStorage, SwalConfig } from "../utils/Configs";
 import { LOCALSTORAGE_USER } from "../utils/Constants";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRightFromBracket, faUser } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 
-
-const Header = () => {
+export default function Header() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const user = useSelector((state) => state.user.user);
   const showLogin = useSelector((state) => state.user.showLogin);
   const showRegister = useSelector((state) => state.user.showRegister);
-
-  const [accountInfo, setAccountInfo] = useState(null);
-
+  const showForgetPassword = useSelector((state) => state.user.showForgetPassword);
 
   const handleLogout = () => {
     Swal.fire({
@@ -33,19 +35,20 @@ const Header = () => {
       denyButtonText: 'Hủy',
       icon: 'question',
       iconColor: 'rgb(104 217 254)',
-      confirmButtonColor: '#f97316'
+      confirmButtonColor: '#DDB958'
     }).then((result) => {
       if (result.isConfirmed) {
         dispatch(logout());
         SwalConfig('Đã đăng xuất', 'success', false);
         removeLocalStorage(LOCALSTORAGE_USER);
+        navigate("/trang-chu");
       }
     });
   };
 
   const menu = (
     <Menu>
-      <Menu.Item key="1" icon={<FontAwesomeIcon icon={faUser} />} onClick={() => navigate('/inforUser')}>
+      <Menu.Item key="1" icon={<FontAwesomeIcon icon={faUser} />} onClick={() => navigate('/thong-tin-ca-nhan')}>
         Thông tin tài khoản
       </Menu.Item>
       <Menu.Item key="2" icon={<FontAwesomeIcon icon={faArrowRightFromBracket} />} onClick={handleLogout}>
@@ -67,59 +70,62 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-
   return (
     <header
       className={`${showHeader ? "translate-y-0" : "-translate-y-full"} bg-gray-900 text-white py-4 shadow-md fixed top-0 left-0 w-full transition-transform duration-300 z-50`}
     >
-      <div className="container mx-auto flex items-center justify-between pl-20 pr-5">
+      <div className="container mx-auto flex items-center justify-between">
         {/* Logo trường và đoàn */}
         <div className="flex items-center gap-2">
-          <img
-            src="https://cdn.haitrieu.com/wp-content/uploads/2021/10/Logo-DH-Cong-Nghe-UET.png"
-            alt="Logo UET"
-            className="h-12"
-          />
-          <img
-            src="https://cdn.haitrieu.com/wp-content/uploads/2021/11/Logo-Doan-Thanh-NIen-Cong-San-Ho-Chi-Minh-1-768x800.png"
-            alt="Logo Đoàn"
-            className="h-12"
-          />
-          <img
-            src="https://cdn.haitrieu.com/wp-content/uploads/2021/10/Logo-Hoi-Sinh-Vien-Viet-Nam-635x635.png"
-            alt="Logo HSV"
-            className="h-12"
-          />
+          <img src={logoUet} alt="Logo UET" className="h-16" />
+          <img src={logoDoan} alt="Logo Đoàn" className="h-16" />
+          <img src={logoHsv} alt="Logo HSV" className="h-16" />
           <img src={dhcn} alt="Logo DHCN" className="h-12" />
-          <nav className="flex gap-6 text-base ml-14">
-            <Link to="/" className="hover:text-yellow-400 transition">
-              Trang chủ
-            </Link>
-            <Link to="/hoat-dong" className="hover:text-yellow-400 transition">
-              Hoạt động
-            </Link>
-            <Link to="/quyen-gop" className="hover:text-yellow-400 transition">
-              Quyên góp
-            </Link>
-            <Link to="/tam-guong" className="hover:text-yellow-400 transition">
-              Tấm gương tình nguyện
-            </Link>
+          <nav className="flex gap-6 text-lg ml-14 pl-4 font-semibold">
+            {[
+              { to: "/trang-chu", label: "Trang chủ" },
+              { to: "/hoat-dong", label: "Hoạt động" },
+              { to: "/quyen-gop", label: "Quyên góp" },
+              { to: "/tam-guong", label: "Tấm gương tình nguyện" },
+            ].map(({ to, label }) => {
+              const isActive = location.pathname === to;
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`hover:text-white transition ${isActive ? "text-white" : "text-[#A0A0A7]"
+                    }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
-        {/* Thanh điều hướng */}
-
-
         {/* Nút đăng nhập hoặc avatar */}
-        <div className="flex items-center gap-4 ">
+        <div className="flex items-center gap-4">
           {user ? (
             <Dropdown overlay={menu} trigger={['hover']} placement="bottom" arrow>
               <div className="flex items-center gap-2 cursor-pointer">
-                <img
-                  src={accountInfo?.body?.avatar || "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3"}
-                  alt="User Avatar"
-                  className="w-14 h-14 rounded-full object-cover "
-                />
+                <div className="relative">
+                  <img
+                    src={user?.avatar || "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3"}
+                    alt="User Avatar"
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                  <span
+                    className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-[#111827] 
+                    ${user?.status === 'ACTIVE' ? 'bg-green-500' : user?.status === 'LOCKED' ? 'bg-red-500' : 'bg-red-400'}`}
+                    title={
+                      user?.status === 'ACTIVE'
+                        ? 'Đang hoạt động'
+                        : user?.status === 'LOCKED'
+                          ? 'Bị khóa'
+                          : 'Không rõ'
+                    }
+                  ></span>
+                </div>
               </div>
             </Dropdown>
           ) : (
@@ -136,10 +142,9 @@ const Header = () => {
         <AnimatePresence>
           {showLogin && <Login />}
           {showRegister && <Register />}
+          {showForgetPassword && <ForgetPassword />}
         </AnimatePresence>
       </div>
     </header>
   );
-};
-
-export default Header;
+}

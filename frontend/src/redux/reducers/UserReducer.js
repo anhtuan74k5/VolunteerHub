@@ -4,10 +4,11 @@ const LOCALSTORAGE_USER = "user";
 
 const initialState = {
     user: JSON.parse(localStorage.getItem(LOCALSTORAGE_USER)) || null,
-    token: JSON.parse(localStorage.getItem(LOCALSTORAGE_USER))?.accessToken || null,
+    token: JSON.parse(localStorage.getItem(LOCALSTORAGE_USER))?.token || null,
     isLoggedIn: !!localStorage.getItem(LOCALSTORAGE_USER),
     showLogin: false,
     showRegister: false,
+    showForgetPassword: false
 };
 
 const UserReducer = createSlice({
@@ -22,9 +23,11 @@ const UserReducer = createSlice({
             state.showLogin = false;
             state.showRegister = true;
         },
+
         closeModal: (state) => {
             state.showLogin = false;
             state.showRegister = false;
+            state.showForgetPassword = false;
         },
 
         loginSuccess: (state, action) => {
@@ -44,6 +47,16 @@ const UserReducer = createSlice({
             state.showLogin = true;
         },
 
+        openForgetPassword: (state) => {
+            state.showRegister = false;
+            state.showLogin = false;
+            state.showForgetPassword = true;
+        },
+
+        forgetPasswordSuccess: (state) => {
+            state.showForgetPassword = false;
+            state.showLogin = true;
+        },
 
         updateProfile: (state, action) => {
             state.user = { ...state.user, ...action.payload };
@@ -58,6 +71,8 @@ export const {
     loginSuccess,
     logout,
     registerSuccess,
+    openForgetPassword,
+    forgetPasswordSuccess,
     updateProfile,
 } = UserReducer.actions;
 
