@@ -15,6 +15,8 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       enum: [
         "registration_approved", // Đăng ký được duyệt
+        "registration_rejected",  // 👈 ĐÃ THÊM
+        "registration_completed", // 👈 ĐÃ THÊM
         "cancel_approved", // Yêu cầu hủy được chấp thuận
         "cancel_rejected", // Yêu cầu hủy bị từ chối
       ],

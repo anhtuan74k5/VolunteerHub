@@ -5,6 +5,7 @@ import { User, Lock } from "lucide-react";
 import Swal from "sweetalert2";
 import { DangNhap } from "../services/UserService";
 import { useEffect } from "react";
+import { subscribeUserToPush } from "../utils/notificationService";
 
 export default function Login() {
     const dispatch = useDispatch();
@@ -39,16 +40,21 @@ export default function Login() {
                 password: form.password,
             });
 
-            const { user, token } = response.data;
+            // 👇 SỬA LỖI Ở ĐÂY: Đọc 'token' thay vì 'accessToken'
+            const { user, token } = response.data; // 👈 SỬA 1
+
             if (form.remember) {
                 localStorage.setItem("rememberedUsername", form.identifier);
             } else {
                 localStorage.removeItem("rememberedUsername");
             }
 
-            localStorage.setItem("user", JSON.stringify({ ...user, token }));
+            // 👇 SỬA LỖI Ở ĐÂY: Lưu 'token' vào 'accessToken'
+            localStorage.setItem("user", JSON.stringify({ ...user, accessToken: token })); // 👈 SỬA 2
 
-            dispatch(loginSuccess({ user, token: token }));
+            // 👇 SỬA LỖI Ở ĐÂY: Gửi 'token' lên Redux
+            dispatch(loginSuccess({ user, token: token })); // 👈 SỬA 3
+            subscribeUserToPush();
             dispatch(closeModal());
             // navigate('hoat-dong');
 
@@ -74,6 +80,7 @@ export default function Login() {
     const inputBg = form.remember ? "bg-[#e8f0fe]" : "bg-[#f5f5f5]";
 
     return (
+        // ... (Toàn bộ phần JSX giữ nguyên, không cần sửa) ...
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 min-h-screen">
             <div className="bg-white rounded-lg shadow-xl w-[520px] overflow-hidden">
                 {/* Header */}
