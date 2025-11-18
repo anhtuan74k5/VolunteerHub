@@ -1,6 +1,6 @@
 // src/controllers/notification.controller.js
 import Notification from "../models/notification.js";
-
+import Subscription from "../models/subscription.js";
 /**
  * @desc Lấy tất cả thông báo của người dùng hiện tại
  * @route GET /api/notifications
@@ -44,5 +44,35 @@ export const markAsRead = async (req, res) => {
   } catch (error) {
     // Xử lý lỗi nếu có
     res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+/**
+ * @desc Đăng ký nhận thông báo (lưu subscription object)
+ * @route POST /api/notifications/subscribe
+ * @access Private
+ */
+export const subscribe = async (req, res) => {
+  try {
+    const subscription = req.body;
+    const userId = req.user._id;
+
+    // 2. Tìm và cập nhật (hoặc tạo mới)
+    // Dùng 'endpoint' làm key duy nhất để tránh trùng lặp
+    await Subscription.findOneAndUpdate(
+      { endpoint: subscription.endpoint },
+      {
+        user: userId,
+        keys: {
+          p256dh: subscription.keys.p256dh,
+          auth: subscription.keys.auth,
+        },
+      },
+      { upsert: true } // 👈 Tự động tạo nếu chưa tồn tại
+    );
+
+    res.status(201).json({ message: "Đăng ký nhận thông báo thành công." });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi đăng ký thông báo", error: error.message });
   }
 };
