@@ -35,7 +35,7 @@ const SwalConfig = (title, icon, showConfirmButton, timer) => {
         showConfirmButton,
         timer: timer ? timer : 1500,
         position: 'center',
-        confirmButtonColor: '#f97316',
+        confirmButtonColor: '#DDB958',
     })
 }
 
@@ -47,7 +47,7 @@ const confirmSwal = async (title = 'Bạn chắc chắn?', text = 'Hành động
         showCancelButton: true,
         confirmButtonText: confirmText,
         cancelButtonText: 'Hủy',
-        confirmButtonColor: '#f97316',
+        confirmButtonColor: '#DDB958',
         cancelButtonColor: '#d33',
     });
     return result.isConfirmed;

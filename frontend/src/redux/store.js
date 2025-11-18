@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
-import UserReducer from '../redux/reducers/UserReducer'; // Đảm bảo dùng đúng tên và đường dẫn
+import UserReducer from '../redux/reducers/UserReducer';
 
 
 export const store = configureStore({

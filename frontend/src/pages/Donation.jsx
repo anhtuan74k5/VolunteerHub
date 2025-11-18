@@ -1,11 +1,11 @@
 import qr from "../assets/img/qr.jpg"
 import { motion } from "framer-motion";
-import tim from "../assets/img/tim1.png"
+import tim from "../assets/img/Anh_Tim_Qr.png"
 
-const Donation = () => {
+export default function Donation() {
     return (
         <div className="flex  flex-col items-center my-10 gap-5 text-[20px]">
-            <h1 className="text-[35px] text-[#DCBA58] font-semibold">Quyên Góp Duy Trì Hoạt Động Tình Nguyện</h1>
+            <h1 className="text-4xl text-[#DCBA58] font-semibold">Quyên Góp Duy Trì Hoạt Động Tình Nguyện</h1>
             <p className="text-[20px] font-normal">Hãy đóng góp để giúp chúng tôi duy trì các hoạt động tình nguyện và mang lại nhiều lợi ích cho cộng đồng.</p>
             <img
                 src={qr}
@@ -46,5 +46,3 @@ const Donation = () => {
     );
 
 }
-
-export default Donation
