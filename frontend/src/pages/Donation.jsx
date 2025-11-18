@@ -1,4 +1,4 @@
-import qr from "../assets/img/Qr.jpg"
+import qr from "../assets/img/qr.jpg"
 import { motion } from "framer-motion";
 import tim from "../assets/img/Anh_Tim_Qr.png"
 
