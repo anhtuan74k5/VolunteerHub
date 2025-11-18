@@ -62,7 +62,6 @@ app.use("/api/dashboard", dashboardRoutes); // Routes cho dashboard
 app.use("/api/statistics", statisticsRoutes); // Routes cho thống kê
 app.use("/api/notifications", notificationRoutes); // Routes cho thông báo
 // Tạo route ảo /uploads để trỏ vào thư mục /uploads thật
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 // =================================================================================================
 // Xử lý lỗi 404 - Route không tồn tại
