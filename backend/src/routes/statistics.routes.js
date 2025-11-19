@@ -5,6 +5,7 @@ import {
   getVolunteerStatisticsByMonth,
   getManagerStatistics,
   getManagerMonthlyStats,
+  getRanking,
 } from "../controllers/statistics.controller.js";
 import { verifyToken, eventManager } from "../middlewares/auth.js";
 import { getAllEventsForAllUsers } from "../controllers/statistics.controller.js";
@@ -43,5 +44,9 @@ router.get(
 //[GET] /api/statistics/events
 // Lấy tất cả sự kiện cho tất cả người dùng
 router.get("/events", verifyToken, getAllEventsForAllUsers);
+
+// [GET] /api/statistics/ranking
+// Xem bảng xếp hạng (Yêu cầu đăng nhập)
+router.get("/ranking", verifyToken, getRanking);
 
 export default router;

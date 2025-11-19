@@ -12,6 +12,7 @@ import {
   getMyEvents,
   completeEvent,
   getEventParticipants,
+  getEventDetailsForManagement,
 } from "../controllers/event.controller.js";
 
 const router = express.Router();
@@ -56,4 +57,12 @@ router.put("/:id/complete", verifyToken, eventManager, completeEvent);
 // Lấy danh sách (công khai) những ai đã được duyệt tham gia
 router.get("/public/:id/participants", getEventParticipants);
 
+// [GET] /api/events/management/:id
+// Xem chi tiết sự kiện theo ID (Admin xem all, Manager xem của mình)
+router.get(
+  "/management/:id",
+  verifyToken,
+  eventManager,
+  getEventDetailsForManagement
+);
 export default router;

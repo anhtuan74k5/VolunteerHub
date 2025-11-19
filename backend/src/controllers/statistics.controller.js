@@ -1,7 +1,7 @@
 // src/controllers/statistics.controller.js
 import Event from "../models/event.js";
 import Registration from "../models/registration.js";
-
+import User from "../models/user.js";
 /**
  * @desc Lấy thống kê tổng quan cho một volunteer
  * @route GET /api/statistics/volunteer/overview
@@ -259,5 +259,21 @@ export const getAllEventsForAllUsers = async (req, res) => {
       message: "Lỗi khi lấy danh sách sự kiện",
       error: error.message,
     });
+  }
+};
+
+// [GET] /api/statistics/ranking -> Lấy Top 10 thành viên điểm cao nhất
+export const getRanking = async (req, res) => {
+  try {
+    const leaderboard = await User.find({ role: "VOLUNTEER" })
+      .sort({ points: -1 })
+      .limit(10)
+      .select("name avatar points email");
+
+    res.status(200).json(leaderboard);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Lỗi lấy bảng xếp hạng", error: error.message });
   }
 };

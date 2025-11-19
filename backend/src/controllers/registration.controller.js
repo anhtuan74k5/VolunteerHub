@@ -1,6 +1,6 @@
 import Registration from "../models/registration.js";
 import Event from "../models/event.js";
-
+import User from "../models/user.js";
 // --- Chức năng cho Volunteer ---
 
 // [POST] /api/registrations/:eventId -> Volunteer đăng ký sự kiện
@@ -21,7 +21,7 @@ export const registerForEvent = async (req, res) => {
     // Đếm số lượng người đã đăng ký (cả 'pending' và 'approved')
     const currentParticipants = await Registration.countDocuments({
       event: eventId,
-      status: { $in: ["approved", "pending"] }, // Đếm cả 2 trạng thái
+      status: { $in: ["approved"] }, // Đếm cả 2 trạng thái
     });
 
     if (currentParticipants >= event.maxParticipants) {
@@ -51,19 +51,48 @@ export const registerForEvent = async (req, res) => {
   }
 };
 
-// [DELETE] /api/registrations/:eventId -> Volunteer hủy đăng ký
+// [DELETE] /api/registrations/:eventId -> Hủy đăng ký (Có trừ điểm nếu sát giờ)
 export const cancelRegistration = async (req, res) => {
   try {
     const eventId = req.params.eventId;
     const volunteerId = req.user._id;
-    const result = await Registration.findOneAndDelete({
+
+    // 1. Tìm đơn đăng ký
+    const registration = await Registration.findOne({
       event: eventId,
       volunteer: volunteerId,
     });
-    if (!result) {
+
+    if (!registration) {
       return res.status(404).json({ message: "Bạn chưa đăng ký sự kiện này." });
     }
-    res.status(200).json({ message: "Hủy đăng ký thành công." });
+
+    // 2. Kiểm tra thời gian để trừ điểm
+    const event = await Event.findById(eventId);
+    let penaltyMessage = "";
+
+    if (event) {
+      const now = new Date();
+      const eventDate = new Date(event.date);
+
+      // Tính khoảng cách thời gian ra ngày
+      // Công thức: (Ngày sự kiện - Ngày hiện tại) / (ms * giây * phút * giờ)
+      const diffTime = eventDate - now;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Nếu còn ít hơn hoặc bằng 2 ngày -> Trừ 10 điểm
+      if (diffDays <= 2) {
+        await User.findByIdAndUpdate(volunteerId, { $inc: { points: -10 } });
+        penaltyMessage = " (Bạn bị trừ 10 điểm uy tín do hủy sát ngày diễn ra)";
+      }
+    }
+
+    // 3. Xóa đăng ký
+    await Registration.findByIdAndDelete(registration._id);
+
+    res.status(200).json({
+      message: "Hủy đăng ký thành công." + penaltyMessage,
+    });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }

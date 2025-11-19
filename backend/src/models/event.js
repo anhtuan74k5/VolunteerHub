@@ -28,6 +28,11 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    points: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     maxParticipants: {
       type: Number,
       required: true,
