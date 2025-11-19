@@ -119,14 +119,13 @@ export default function EventManagerEvents() {
             render: (count, event) => (
                 <Button
                     type="link"
-                    className="font-semibold text-blue-600 hover:text-blue-800 "
+                    className="!font-semibold !text-blue-600 hover:scale-110 transition-transform duration-150"
                     onClick={() => navigate(`/quanlisukien/su-kien/${event._id}/participants`)}
                 >
                     {count ?? 0}
                 </Button>
             )
         },
-
         {
             title: 'Số lượng tối đa',
             dataIndex: 'maxParticipants',
@@ -138,13 +137,13 @@ export default function EventManagerEvents() {
             dataIndex: 'status',
             render: (status) => {
                 const color = {
-                    pending: 'text-[#DDB958]',
-                    completed: 'text-blue-500',
-                    approved: 'text-green-500'
-                }[status] || 'text-red-500';
+                    pending: '!text-[#DDB958]',
+                    completed: '!text-blue-500',
+                    approved: '!text-green-500'
+                }[status] || '!text-red-500';
 
                 return (
-                    <Tag className={`ml-0 pl-0 border-none bg-transparent font-semibold text-[14px] ${color}`}>
+                    <Tag className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}>
                         {status.toUpperCase()}
                     </Tag>
                 );

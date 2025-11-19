@@ -37,7 +37,7 @@ export default function EventManagerTemplate() {
     }, []);
 
     return (
-        <Layout className="min-h-screen ">
+        <Layout className="!min-h-screen">
             <Sider trigger={null} collapsible collapsed={collapsed}>
                 <NavLink to='/' className="flex items-center justify-center p-2">
                     <img
@@ -77,7 +77,7 @@ export default function EventManagerTemplate() {
             </Sider>
 
             <Layout className="site-layout ">
-                <Header className="site-layout-background pl-4 text-[1.8rem] bg-white">
+                <Header className="site-layout-background !pl-4 text-[1.8rem] !bg-white">
                     {React.createElement(
                         collapsed ? MenuUnfoldOutlined : MenuFoldOutlined,
                         {
@@ -88,7 +88,7 @@ export default function EventManagerTemplate() {
                 </Header>
 
                 <Content
-                    className="site-layout-background contentAdmin bg-white"
+                    className="site-layout-background contentAdmin !bg-white"
                     style={{
                         margin: '24px 16px',
                         padding: 24,

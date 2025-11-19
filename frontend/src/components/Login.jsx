@@ -74,7 +74,7 @@ export default function Login() {
     const inputBg = form.remember ? "bg-[#e8f0fe]" : "bg-[#f5f5f5]";
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 min-h-screen">
+        <div className="fixed inset-0 flex items-center justify-center z-50 min-h-screen bg-black/50">
             <div className="bg-white rounded-lg shadow-xl w-[520px] overflow-hidden">
                 {/* Header */}
                 <div className="bg-[#2d2d3a] flex justify-between items-center px-5 py-5">
@@ -134,12 +134,12 @@ export default function Login() {
 
                         <button
                             type="submit"
-                            className={`${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#2d2d3a] hover:bg-[#1f1f2b]"
-                                } text-white font-semibold px-5 py-2 rounded-md transition`}
+                            className={`${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#2d2d3a] hover:bg-[#1f1f2b] cursor-pointer"} text-white font-semibold px-5 py-2 rounded-md transition`}
                             disabled={loading}
                         >
                             {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
                         </button>
+
                     </div>
 
                     {/* Chuyển sang đăng ký */}

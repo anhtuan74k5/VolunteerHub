@@ -99,7 +99,7 @@ export default function Register() {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 min-h-screen">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 min-h-screen">
             <div className="bg-white rounded-lg shadow-xl w-[540px] overflow-hidden">
                 {/* Header */}
                 <div className="bg-[#2d2d3a] flex justify-between items-center px-5 py-5">

@@ -37,7 +37,7 @@ export default function AdminTemplate() {
     }, []);
 
     return (
-        <Layout className="min-h-screen ">
+        <Layout className="!min-h-screen ">
             <Sider trigger={null} collapsible collapsed={collapsed}>
                 <NavLink to='/' className="flex items-center justify-center p-2">
                     <img
@@ -77,7 +77,7 @@ export default function AdminTemplate() {
             </Sider>
 
             <Layout className="site-layout ">
-                <Header className="site-layout-background pl-4 text-[1.8rem] bg-white">
+                <Header className="site-layout-background !pl-4 text-[1.8rem] !bg-white">
                     {React.createElement(
                         collapsed ? MenuUnfoldOutlined : MenuFoldOutlined,
                         {

@@ -5,9 +5,13 @@ import tapThe from "../assets/img/Tap_The.jpeg";
 import introVideo from "../assets/video/test4K - Trim.mp4";
 import { useDispatch } from "react-redux";
 import { openRegister } from "../redux/reducers/UserReducer";
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 export default function HomePage() {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const isLoggedIn = useSelector((state) => state.user.isLoggedIn);
     const [showContent, setShowContent] = useState(false);
 
     useEffect(() => {
@@ -22,8 +26,13 @@ export default function HomePage() {
         return () => clearTimeout(fallback);
     }, []);
 
-    const handleRegisterClick = () => {
-        dispatch(openRegister());
+    const handleButtonClick = (e) => {
+        e.preventDefault();
+        if (isLoggedIn) {
+            navigate("/hoat-dong"); // Nếu đã đăng nhập → chuyển trang
+        } else {
+            dispatch(openRegister()); // Nếu chưa đăng nhập → mở modal đăng ký
+        }
     };
 
     return (
@@ -162,17 +171,14 @@ export default function HomePage() {
 
                             <motion.a
                                 href="#"
-                                className="mt-8 inline-block text-white px-6 py-3 rounded-lg shadow-md bg-[#DCBA58] hover:bg-[#CDA550] transition"
+                                className="mt-8 inline-block text-white px-6 py-3 rounded-lg shadow-md bg-[#DCBA58] hover:bg-[#CDA550] transition font-semibold"
                                 initial={{ y: 50, opacity: 0 }}
                                 whileInView={{ y: 0, opacity: 1 }}
                                 transition={{ delay: 0.8 }}
                                 whileHover={{ scale: 1.05 }}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    handleRegisterClick();
-                                }}
+                                onClick={handleButtonClick}
                             >
-                                Đăng Ký Ngay →
+                                {isLoggedIn ? "Xem Hoạt Động →" : "Đăng Ký Ngay →"}
                             </motion.a>
                         </motion.div>
                     </motion.div>

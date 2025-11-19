@@ -160,7 +160,7 @@ export default function EventDetail() {
     return (
         <div className="max-w-4xl mx-auto mt-10 bg-white shadow-lg rounded-2xl overflow-hidden text-[#111827] my-4">
             {/* Tiêu đề */}
-            <h1 className="text-4xl sm:text-4xl font-bold px-6 pt-8">{event.name}</h1>
+            <h1 className="text-4xl sm:text-4xl font-bold px-6 !pt-8">{event.name}</h1>
 
             {/* Ảnh */}
             <img

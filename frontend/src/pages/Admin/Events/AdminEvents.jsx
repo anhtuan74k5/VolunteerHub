@@ -103,7 +103,7 @@ export default function AdminEvents() {
             render: (text, event) => (
                 <Button
                     type="link"
-                    className="font-semibold ml-0 pl-0 !text-blue-600 max-w-[380px] transform transition-transform duration-200 hover:scale-105"
+                    className="!font-semibold ml-0 pl-0 !text-blue-600 max-w-[380px] transform transition-transform duration-200 hover:scale-105"
                     onClick={() => handleEventDetail(event._id)}
                     style={{ whiteSpace: "normal", padding: 0 }}
                 >
@@ -132,13 +132,12 @@ export default function AdminEvents() {
             dataIndex: 'status',
             render: (status) => {
                 const color = {
-                    pending: 'text-[#DDB958]',
-                    completed: 'text-blue-500',
-                    approved: 'text-green-500'
-                }[status] || 'text-red-500';
-
+                    pending: '!text-[#DDB958]',
+                    completed: '!text-blue-500',
+                    approved: '!text-green-500'
+                }[status] || '!text-red-500';
                 return (
-                    <Tag className={`ml-0 pl-0 border-none bg-transparent font-semibold text-[14px] ${color}`}>
+                    <Tag className={`ml-0 pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}>
                         {status.toUpperCase()}
                     </Tag>
                 );

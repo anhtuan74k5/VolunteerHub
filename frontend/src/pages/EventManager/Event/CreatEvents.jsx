@@ -43,7 +43,8 @@ export default function CreateEvent() {
                 coverImage: handleCoverImage(values.coverImage),
                 galleryImages: handleGalleryImages(values.galleryImages),
             };
-
+            console.log("EVENT DATA:", eventData);
+            console.log("DESCRIPTION SEND:", eventData.description); // <== XEM Ở ĐÂY
             const formData = new FormData();
             Object.keys(eventData).forEach((key) => {
                 if (Array.isArray(eventData[key])) {
@@ -56,7 +57,7 @@ export default function CreateEvent() {
             const res = await CreatEvents(formData);
             if (res.status === 201) {
                 Swal.fire("Thành công!", "Sự kiện đã được tạo", "success");
-                navigate("/admin/su-kien");
+                navigate("/quanlisukien/su-kien");
             } else {
                 Swal.fire("Lỗi", "Không thể tạo sự kiện", "error");
             }
@@ -86,21 +87,17 @@ export default function CreateEvent() {
                 </Form.Item>
 
                 {/* Soạn thảo HTML */}
+
                 <Form.Item
                     label="Mô tả chi tiết"
-                    name="description"
-                    rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
+                    required
                 >
                     <div
                         ref={editorRef}
                         contentEditable
                         suppressContentEditableWarning
-                        onInput={(e) => {
-                            const html = e.currentTarget.innerHTML;
-                            setDescription(html);
-                            form.setFieldsValue({ description: html });
-                        }}
                         onPaste={handlePaste}
+                        onInput={(e) => setDescription(e.currentTarget.innerHTML)}
                         style={{
                             border: '1px solid #d9d9d9',
                             borderRadius: '6px',
@@ -115,7 +112,6 @@ export default function CreateEvent() {
                             color: '#333',
                             outline: 'none'
                         }}
-                        dangerouslySetInnerHTML={{ __html: description }}
                     />
                 </Form.Item>
 

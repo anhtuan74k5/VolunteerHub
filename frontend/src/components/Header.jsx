@@ -46,16 +46,21 @@ export default function Header() {
     });
   };
 
-  const menu = (
-    <Menu>
-      <Menu.Item key="1" icon={<FontAwesomeIcon icon={faUser} />} onClick={() => navigate('/thong-tin-ca-nhan')}>
-        Thông tin tài khoản
-      </Menu.Item>
-      <Menu.Item key="2" icon={<FontAwesomeIcon icon={faArrowRightFromBracket} />} onClick={handleLogout}>
-        Đăng xuất
-      </Menu.Item>
-    </Menu>
-  );
+  const menuItems = [
+    {
+      key: '1',
+      icon: <FontAwesomeIcon icon={faUser} />,
+      label: 'Thông tin tài khoản',
+      onClick: () => navigate('/thong-tin-ca-nhan'),
+    },
+    {
+      key: '2',
+      icon: <FontAwesomeIcon icon={faArrowRightFromBracket} />,
+      label: 'Đăng xuất',
+      onClick: handleLogout,
+    },
+  ];
+
 
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -106,13 +111,19 @@ export default function Header() {
         {/* Nút đăng nhập hoặc avatar */}
         <div className="flex items-center gap-4">
           {user ? (
-            <Dropdown overlay={menu} trigger={['hover']} placement="bottom" arrow>
+            <Dropdown menu={{ items: menuItems }} trigger={['hover']} placement="bottom" arrow>
               <div className="flex items-center gap-2 cursor-pointer">
                 <div className="relative">
                   <img
-                    src={user?.avatar || "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3"}
+                    src={
+                      user?.avatar
+                        ? (user.avatar.startsWith("http")
+                          ? user.avatar
+                          : `http://localhost:5000${user.avatar}`)
+                        : "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3"
+                    }
                     alt="User Avatar"
-                    className="w-16 h-16 rounded-full object-cover"
+                    className="w-16 h-16 rounded-full object-cover "
                   />
                   <span
                     className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-[#111827] 

@@ -100,7 +100,7 @@ export default function PendingAdminEvents() {
             render: (text, event) => (
                 <Button
                     type="link"
-                    className="font-semibold ml-0 pl-0 !text-blue-600 max-w-[380px] transform transition-transform duration-200 hover:scale-105"
+                    className="!font-semibold ml-0 pl-0 !text-blue-600 max-w-[380px] transform transition-transform duration-200 hover:scale-105"
                     onClick={() => handleEventDetail(event._id)}
                     style={{ whiteSpace: "normal", padding: 0 }}
                 >

@@ -3,33 +3,41 @@ import { Tabs } from "antd";
 import moment from "moment";
 import { EditOutlined, SaveOutlined } from "@ant-design/icons";
 import { GetUserInfo, UpdateUser } from "../services/UserService";
-import cats from "../assets/img/cats_b1-removebg-preview.png"
-import bear from "../assets/img/bearb1-removebg-preview.png"
-import dog from "../assets/img/dog_b1-removebg-preview.png"
-import lizard from "../assets/img/lizard-removebg-preview.png"
+import cats from "../assets/img/cats_b1-removebg-preview.png";
+import bear from "../assets/img/bearb1-removebg-preview.png";
+import dog from "../assets/img/dog_b1-removebg-preview.png";
+import lizard from "../assets/img/lizard-removebg-preview.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMars, faVenus } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 
 const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
     const [editData, setEditData] = useState({});
-    const [avatarUrl, setAvatarUrl] = useState("");
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState("");
     const [editMode, setEditMode] = useState(false);
 
     useEffect(() => {
         if (user) {
+            console.log("USER AVATAR FROM API: ", user.avatar);
+
             setEditData({
                 username: user.username || "",
                 name: user.name || "",
                 email: user.email || "",
                 phone: user.phone || "",
                 birthday: user.birthday || "",
-                status: user.status || "Hoạt động",
                 gender: user.gender || "Male",
+                status: user.status || "Hoạt động",
             });
-            setAvatarUrl(user.avatar || "");
+            setAvatarPreview(
+                user.avatar?.startsWith("http")
+                    ? user.avatar
+                    : `http://localhost:5000${user.avatar}`
+            );
         }
     }, [user]);
+
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -37,58 +45,78 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
     };
 
     const handleAvatarChange = (e) => {
-        setAvatarUrl(e.target.value);
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
     };
 
-
     const handleSaveAll = async () => {
-        const updatedUser = { ...editData, avatar: avatarUrl };
+        const formData = new FormData();
+        formData.append("name", editData.name);
+        formData.append("birthday", editData.birthday);
+        formData.append("gender", editData.gender);
+        formData.append("phone", editData.phone || "");
+        if (avatarFile) {
+            formData.append("avatar", avatarFile);
+        }
 
         try {
-            const res = await UpdateUser(updatedUser);
-            if (res.status === 200) {
-                Swal.fire({
-                    title: "Thành công!",
-                    text: "Cập nhật thông tin thành công.",
-                    icon: "success",
-                    confirmButtonText: "OK",
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-                setEditMode(false);
-                onUserUpdated(res.data.user || updatedUser);
-            }
-        } catch (error) {
+            const res = await UpdateUser(formData);
+            Swal.fire({
+                title: "Thành công!",
+                text: "Cập nhật thông tin thành công.",
+                icon: "success",
+                timer: 2000,
+                showConfirmButton: false,
+            });
+            setEditMode(false);
+            onUserUpdated(res.data.user);
+            setAvatarFile(null);
+        } catch (err) {
             Swal.fire({
                 title: "Lỗi!",
-                text: "Không thể cập nhật thông tin. Vui lòng thử lại.",
+                text: err.response?.data?.message || "Cập nhật thất bại",
                 icon: "error",
                 confirmButtonText: "Đóng",
                 confirmButtonColor: "#DDB958",
             });
-            console.error(error);
         }
     };
-
 
     return (
         <div
             className="profile-page theme-purple min-h-screen py-[6rem]"
             style={{
-                backgroundImage: `
-      linear-gradient(to right, #2196F3, #2E64F5),
-      linear-gradient(to bottom, transparent 50%, white 50%)
-    `,
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: '100% 50%, 100% 100%',
+                backgroundImage: `linear-gradient(to right, #2196F3, #2E64F5), linear-gradient(to bottom, transparent 50%, white 50%)`,
+                backgroundRepeat: "no-repeat",
+                backgroundSize: "100% 50%, 100% 100%",
             }}
         >
-            <div className="content relative max-w-[1100px] mx-auto px-6 py-[50px] bg-white rounded-3xl shadow-lg ">
+            <div className="content relative max-w-[1100px] mx-auto px-6 !py-[50px] bg-white rounded-3xl shadow-lg ">
                 {/* Ảnh trang trí */}
-                <img src={cats} alt="cat" className="absolute -top-[53px] left-[20px] w-[200px] drop-shadow-lg z-10" />
-                <img src={bear} alt="bear" className="absolute bottom-[180px] -right-[90px] w-[135px] drop-shadow-lg z-10" />
-                <img src={dog} alt="dog" className="absolute bottom-[10px] right-[150px] w-[350px] drop-shadow-lg z-10" />
-                <img src={lizard} alt="lizard" className="absolute top-[56px] right-[230px] w-[80px] drop-shadow-lg z-10" style={{ transform: 'scaleY(-1)' }} />
+                <img
+                    src={cats}
+                    alt="cat"
+                    className="absolute -top-[53px] left-[20px] w-[200px] drop-shadow-lg z-10"
+                />
+                <img
+                    src={bear}
+                    alt="bear"
+                    className="absolute bottom-[180px] -right-[90px] w-[135px] drop-shadow-lg z-10"
+                />
+                <img
+                    src={dog}
+                    alt="dog"
+                    className="absolute bottom-[10px] right-[150px] w-[350px] drop-shadow-lg z-10"
+                />
+                <img
+                    src={lizard}
+                    alt="lizard"
+                    className="absolute top-[56px] right-[230px] w-[80px] drop-shadow-lg z-10"
+                    style={{ transform: "scaleY(-1)" }}
+                />
 
                 {/* Header */}
                 <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6 text-sm">
@@ -106,10 +134,11 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                                 fontWeight: "bold",
                             }}
                         >
-                            {user?.role === "VOLUNTEER" ? "TÌNH NGUYỆN VIÊN" : (user?.role || "Người dùng")}
+                            {user?.role === "VOLUNTEER"
+                                ? "TÌNH NGUYỆN VIÊN"
+                                : user?.role || "Người dùng"}
                         </span>
 
-                        {/* Icon chỉnh sửa toàn cục */}
                         <div className="ml-4 mt-4 flex gap-4 text-3xl">
                             {!editMode ? (
                                 <button onClick={() => setEditMode(true)} className="text-blue-500">
@@ -123,17 +152,26 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 text-sm">
-                        <div className="bg-orange-500 text-white px-4 py-2 rounded-full shadow mt-4 mr-2 font-bold text-[14px]">
+                    <div className="flex items-center gap-3 mt-4">
+                        {/* Điểm người dùng */}
+                        <div className="bg-orange-500 text-white px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px]">
                             🌟 {user?.point || 0} ĐIỂM
                         </div>
-                        <div className={`px-4 py-2 rounded-full shadow mt-4 mr-2 font-bold text-[14px] text-white
-                            ${user?.status === 'ACTIVE' ? 'bg-green-500' : user?.status === 'LOCKED' ? 'bg-red-500' : 'bg-gray-400'}`}>
-                            {user?.status === 'ACTIVE'
-                                ? 'ĐANG HOẠT ĐỘNG'
-                                : user?.status === 'LOCKED'
-                                    ? 'BỊ KHÓA'
-                                    : 'Không rõ'}
+
+                        {/* Trạng thái người dùng */}
+                        <div
+                            className={`px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px] text-white ${user?.status === "ACTIVE"
+                                ? "bg-green-500"
+                                : user?.status === "LOCKED"
+                                    ? "bg-red-500"
+                                    : "bg-gray-400"
+                                }`}
+                        >
+                            {user?.status === "ACTIVE"
+                                ? "ĐANG HOẠT ĐỘNG"
+                                : user?.status === "LOCKED"
+                                    ? "BỊ KHÓA"
+                                    : "Không rõ"}
                         </div>
                     </div>
                 </div>
@@ -141,19 +179,18 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                 {/* Avatar */}
                 <div className="content__cover relative flex flex-col items-center mt-6">
                     <div
-                        className="content__avatar w-[200px] h-[200px] rounded-full bg-cover bg-center relative cursor-pointer -mt-[130px]"
+                        className="content__avatar w-[200px] h-[200px] rounded-full bg-cover bg-center relative cursor-pointer -mt-[130px] shadow-lg"
                         style={{
-                            backgroundImage: `url(${avatarUrl || "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa"})`,
+                            backgroundImage: `url(${avatarPreview || "https://cdn-icons-png.flaticon.com/512/149/149071.png"})`,
                         }}
                     >
                         {editMode && (
                             <div className="absolute bottom-0 left-0 w-full bg-white p-2 flex items-center gap-2 rounded-b-full">
                                 <input
-                                    type="text"
-                                    value={avatarUrl}
+                                    type="file"
+                                    accept="image/*"
                                     onChange={handleAvatarChange}
-                                    placeholder="Nhập URL avatar"
-                                    className="flex-1 border border-gray-300 p-1 text-sm"
+                                    className="flex-1"
                                 />
                             </div>
                         )}
@@ -177,17 +214,44 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 
                 {/* 2 cột thông tin */}
                 <div className="flex justify-between gap-12 content__list mt-6 text-[20px] px-4 py-2">
-                    {/* Cột trái */}
                     <ul className="flex-1 space-y-8 [&>li:last-child]:border-b-0">
-                        <InfoRow label="Tên đăng nhập" name="username" editData={editData} handleInputChange={handleInputChange} editMode={editMode} />
-                        <InfoRow label="Email" name="email" editData={editData} handleInputChange={handleInputChange} editMode={editMode} />
-                        <InfoRow label="Giới tính" name="gender" editData={editData} handleInputChange={handleInputChange} type="gender" editMode={editMode} />
+                        <InfoRow
+                            label="Tên đăng nhập"
+                            name="username"
+                            editData={editData}
+                            editMode={false}
+                        />
+                        <InfoRow
+                            label="Email"
+                            name="email"
+                            editData={editData}
+                            editMode={false}
+                        />
+                        <InfoRow
+                            label="Giới tính"
+                            name="gender"
+                            editData={editData}
+                            handleInputChange={handleInputChange}
+                            type="gender"
+                            editMode={editMode}
+                        />
                     </ul>
-
-                    {/* Cột phải */}
                     <ul className="flex-1 space-y-8 [&>li:last-child]:border-b-0">
-                        <InfoRow label="Số điện thoại" name="phone" editData={editData} handleInputChange={handleInputChange} editMode={editMode} />
-                        <InfoRow label="Ngày sinh" name="birthday" editData={editData} handleInputChange={handleInputChange} type="date" editMode={editMode} />
+                        <InfoRow
+                            label="Số điện thoại"
+                            name="phone"
+                            editData={editData}
+                            handleInputChange={handleInputChange}
+                            editMode={editMode}
+                        />
+                        <InfoRow
+                            label="Ngày sinh"
+                            name="birthday"
+                            editData={editData}
+                            handleInputChange={handleInputChange}
+                            type="date"
+                            editMode={editMode}
+                        />
                     </ul>
                 </div>
             </div>
@@ -285,16 +349,13 @@ const InforUser = () => {
                 console.error("Lỗi khi lấy thông tin người dùng:", error);
             }
         };
-
         fetchUserInfo();
     }, []);
 
     const items = [
         {
             label: (
-                <span className="text-[15px] sm:text-[20px] font-bold ml-2">
-                    Thông tin tài khoản
-                </span>
+                <span className="text-[15px] sm:text-[20px] font-bold ml-2">Thông tin tài khoản</span>
             ),
             key: 1,
             children: <ThongTinNguoiDung user={user} onUserUpdated={setUser} />,
@@ -302,9 +363,9 @@ const InforUser = () => {
     ];
 
     return user ? (
-        <Tabs className="pt-[1rem] min-h-[100vh]" items={items} />
+        <Tabs className="!pt-[1rem] min-h-[100vh]" items={items} />
     ) : (
-        <div className="pt-[6rem] text-center text-red-500 font-bold text-xl">
+        <div className="!pt-[6rem] text-center text-red-500 font-bold text-xl">
             Đang tải thông tin người dùng...
         </div>
     );

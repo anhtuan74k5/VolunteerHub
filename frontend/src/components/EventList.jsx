@@ -13,15 +13,16 @@ export default function EventList() {
     category: "",
     status: "",
     query: "",
+    dateOrder: "", // Thêm filter ngày
   });
 
   const [appliedFilters, setAppliedFilters] = useState({
     category: "",
     status: "",
+    dateOrder: "",
   });
 
   const [tab, setTab] = useState("all");
-
   const [myEvents, setMyEvents] = useState([]);
 
   useEffect(() => {
@@ -94,7 +95,9 @@ export default function EventList() {
   };
 
   useEffect(() => {
-    let filtered = events;
+    let filtered = [...events]; // sao chép dữ liệu gốc
+
+    // 1. Lọc theo tab
     if (tab === "joined") {
       const joinedEventIds = new Set(myEvents.map((item) => item.event._id));
       filtered = filtered.filter((event) => joinedEventIds.has(event._id));
@@ -102,12 +105,16 @@ export default function EventList() {
       const joinedEventIds = new Set(myEvents.map((item) => item.event._id));
       filtered = filtered.filter((event) => !joinedEventIds.has(event._id));
     }
+
+    // 2. Lọc theo category và status
     if (appliedFilters.category) {
       filtered = filtered.filter((event) => event.category === appliedFilters.category);
     }
     if (appliedFilters.status) {
       filtered = filtered.filter((event) => event.status === appliedFilters.status);
     }
+
+    // 3. Lọc theo tìm kiếm
     if (debouncedQuery) {
       filtered = filtered.filter(
         (event) =>
@@ -116,13 +123,25 @@ export default function EventList() {
       );
     }
 
+    // 4. Lọc theo thời gian
+    if (appliedFilters.dateOrder === "asc") {
+      filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else if (appliedFilters.dateOrder === "desc") {
+      filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+      // Khi không chọn gì, giữ thứ tự gốc theo events
+      filtered = filtered.sort((a, b) => events.findIndex(e => e._id === a._id) - events.findIndex(e => e._id === b._id));
+    }
+
     setFilteredEvents(filtered);
   }, [events, appliedFilters, debouncedQuery, tab, myEvents]);
+
 
   const applyFilter = () => {
     setAppliedFilters({
       category: filters.category,
       status: filters.status,
+      dateOrder: filters.dateOrder,
     });
   };
 
@@ -131,7 +150,7 @@ export default function EventList() {
   return (
     <div>
       {/* FILTER UI */}
-      <div className="flex flex-wrap items-left  gap-4 mb-8">
+      <div className="flex flex-wrap items-left gap-4 mb-8">
         <select
           name="category"
           className="border border-gray-300 rounded-md px-3 py-2"
@@ -156,6 +175,18 @@ export default function EventList() {
           <option value="rejected">Từ chối</option>
         </select>
 
+        {/* Lọc theo ngày */}
+        <select
+          name="dateOrder"
+          className="border border-gray-300 rounded-md px-3 py-2"
+          value={filters.dateOrder}
+          onChange={handleFilterChange}
+        >
+          <option value="">Thời gian</option>
+          <option value="asc">Gần đến xa</option>
+          <option value="desc">Xa đến gần</option>
+        </select>
+
         <button
           className="bg-[#DCBA58] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#caa445]"
           onClick={applyFilter}
@@ -163,7 +194,7 @@ export default function EventList() {
           Lọc
         </button>
 
-        <div className="flex w-[45vw] items-center border border-gray-300 rounded-full px-3 py-2  ml-10 shadow shadow-md">
+        <div className="flex w-[44vw] items-center border border-gray-300 rounded-full px-3 py-2 ml-10 shadow shadow-md">
           <input
             type="text"
             name="query"
@@ -217,7 +248,7 @@ export default function EventList() {
         {filteredEvents.map((event) => (
           <div
             key={event._id}
-            className="bg-white rounded-2xl shadow-md overflow-hidden w-[400px] border hover:shadow-xl transition mt-4 h-[750px] flex flex-col"
+            className="bg-white rounded-2xl shadow-md overflow-hidden w-[400px] hover:shadow-xl transition mt-4 h-[750px] flex flex-col"
           >
             <img
               src={
