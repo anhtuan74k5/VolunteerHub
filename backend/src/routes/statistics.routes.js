@@ -12,28 +12,36 @@ import { getAllEventsForAllUsers } from "../controllers/statistics.controller.js
 
 const router = express.Router();
 
-// =================================================================================================
-// Routes cho Thống kê Volunteer (Yêu cầu xác thực token)
-// =================================================================================================
+// =============================================================================
+// ROUTES THỐNG KÊ (STATISTICS)
+// =============================================================================
+
+// --- VOLUNTEER STATISTICS ---
 
 // [GET] /api/statistics/volunteer
-// 📊 Lấy thống kê tổng quan cho volunteer
+// 📊 Thống kê tổng quan (Volunteer)
+// - Chức năng: Xem tổng số sự kiện đã tham gia, tổng giờ làm, điểm số...
+// - Trả về: Object thống kê.
 router.get("/volunteer", verifyToken, getVolunteerStatistics);
 
 // [GET] /api/statistics/volunteer/monthly
-// 📅 Lấy thống kê hoạt động theo tháng cho volunteer
+// 📅 Thống kê theo tháng (Volunteer)
+// - Chức năng: Xem biểu đồ hoạt động theo từng tháng trong năm.
+// - Trả về: Mảng dữ liệu theo tháng.
 router.get("/volunteer/monthly", verifyToken, getVolunteerStatisticsByMonth);
 
-// =================================================================================================
-// Routes cho Thống kê Manager (Yêu cầu xác thực token và quyền manager)
-// =================================================================================================
+// --- MANAGER STATISTICS ---
 
 // [GET] /api/statistics/manager
-// 📊 Lấy thống kê tổng quan cho manager
+// 📈 Thống kê tổng quan (Manager)
+// - Chức năng: Xem tổng số sự kiện đã tổ chức, tổng người tham gia...
+// - Trả về: Object thống kê quản lý.
 router.get("/manager", verifyToken, eventManager, getManagerStatistics);
 
 // [GET] /api/statistics/manager/monthly
-// 📅 Lấy thống kê đăng ký theo tháng cho manager
+// 📉 Thống kê theo tháng (Manager)
+// - Chức năng: Xem xu hướng đăng ký sự kiện theo tháng.
+// - Trả về: Mảng dữ liệu theo tháng.
 router.get(
   "/manager/monthly",
   verifyToken,
@@ -41,12 +49,18 @@ router.get(
   getManagerMonthlyStats
 );
 
-//[GET] /api/statistics/events
-// Lấy tất cả sự kiện cho tất cả người dùng
+// --- GENERAL STATISTICS ---
+
+// [GET] /api/statistics/events
+// 🌍 Thống kê sự kiện toàn hệ thống
+// - Chức năng: Lấy số liệu về các sự kiện (dùng cho trang chủ hoặc báo cáo chung).
+// - Trả về: Danh sách hoặc số liệu tổng hợp.
 router.get("/events", verifyToken, getAllEventsForAllUsers);
 
 // [GET] /api/statistics/ranking
-// Xem bảng xếp hạng (Yêu cầu đăng nhập)
+// 🏆 Bảng xếp hạng
+// - Chức năng: Xem top volunteer có điểm số/giờ làm cao nhất.
+// - Trả về: Danh sách user xếp hạng cao.
 router.get("/ranking", verifyToken, getRanking);
 
 export default router;

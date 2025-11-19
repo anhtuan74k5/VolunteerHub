@@ -11,27 +11,30 @@ import {
 
 const router = express.Router();
 
-// =================================================================================================
-// Routes cho Volunteer
-// =================================================================================================
+// =============================================================================
+// ROUTES DASHBOARD (BẢNG ĐIỀU KHIỂN)
+// =============================================================================
+
+// --- VOLUNTEER DASHBOARD ---
 
 // [GET] /api/dashboard/volunteer
-// 📊 Lấy dữ liệu dashboard cho volunteer (sự kiện đã tham gia, sắp tham gia,...)
-// Yêu cầu xác thực token
+// 📊 Dashboard cho Tình nguyện viên
+// - Chức năng: Lấy tổng quan hoạt động của volunteer (sự kiện đã tham gia, giờ làm, điểm thưởng...).
+// - Trả về: { stats: {...}, upcomingEvents: [...] }
 router.get("/volunteer", verifyToken, getVolunteerDashboard);
 
-// =================================================================================================
-// Routes cho Manager
-// =================================================================================================
+// --- MANAGER DASHBOARD ---
 
 // [GET] /api/dashboard/manager/events
-// 📅 Lấy danh sách sự kiện do manager tạo, kèm theo thống kê đăng ký
-// Yêu cầu xác thực token và quyền manager
+// 📅 Quản lý sự kiện của Manager
+// - Chức năng: Lấy danh sách các sự kiện do Manager này tạo (kèm thống kê số người đăng ký).
+// - Trả về: Danh sách sự kiện.
 router.get("/manager/events", verifyToken, eventManager, getManagerEvents);
 
 // [GET] /api/dashboard/manager/events/:eventId/registrations
-// 👥 Lấy danh sách người đăng ký cho một sự kiện cụ thể
-// Yêu cầu xác thực token và quyền manager
+// 👥 Danh sách đăng ký của sự kiện
+// - Chức năng: Xem ai đã đăng ký tham gia sự kiện này.
+// - Trả về: Danh sách người đăng ký (kèm trạng thái: PENDING, APPROVED...).
 router.get(
   "/manager/events/:eventId/registrations",
   verifyToken,
@@ -40,8 +43,9 @@ router.get(
 );
 
 // [PUT] /api/dashboard/manager/registrations/:id/approve-cancel
-// ✅ Phê duyệt yêu cầu hủy đăng ký của một volunteer
-// Yêu cầu xác thực token và quyền manager
+// ✅ Phê duyệt hủy đăng ký
+// - Chức năng: Chấp nhận yêu cầu hủy tham gia của Volunteer (khi họ xin rút).
+// - Trả về: Thông báo thành công.
 router.put(
   "/manager/registrations/:id/approve-cancel",
   verifyToken,
@@ -50,8 +54,9 @@ router.put(
 );
 
 // [PUT] /api/dashboard/manager/registrations/:id/reject-cancel
-// ❌ Từ chối yêu cầu hủy đăng ký của một volunteer
-// Yêu cầu xác thực token và quyền manager
+// ❌ Từ chối hủy đăng ký
+// - Chức năng: Không cho phép Volunteer hủy tham gia (giữ nguyên trạng thái APPROVED).
+// - Trả về: Thông báo thành công.
 router.put(
   "/manager/registrations/:id/reject-cancel",
   verifyToken,

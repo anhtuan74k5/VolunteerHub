@@ -63,6 +63,10 @@ const eventSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    likesCount: { type: Number, default: 0 },
+    sharesCount: { type: Number, default: 0 },
+    viewsCount: { type: Number, default: 0 },
   },
   {
     // Tự động thêm 2 trường createdAt và updatedAt

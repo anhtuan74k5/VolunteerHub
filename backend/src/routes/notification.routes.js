@@ -8,16 +8,20 @@ import {
 
 const router = express.Router();
 
-// =================================================================================================
-// Routes cho Thông báo (Yêu cầu xác thực token)
-// =================================================================================================
+// =============================================================================
+// ROUTES THÔNG BÁO (NOTIFICATIONS)
+// =============================================================================
 
 // [GET] /api/notifications
-// 📬 Lấy tất cả thông báo của người dùng đang đăng nhập
+// 🔔 Lấy danh sách thông báo
+// - Chức năng: Lấy tất cả thông báo của user đang đăng nhập (sắp xếp mới nhất trước).
+// - Trả về: Danh sách thông báo.
 router.get("/", verifyToken, getMyNotifications);
 
 // [PUT] /api/notifications/:id/read
-// ✔️ Đánh dấu một thông báo cụ thể là đã đọc
+// 👀 Đánh dấu đã đọc
+// - Chức năng: Cập nhật trạng thái isRead = true cho một thông báo.
+// - Trả về: Thông báo đã cập nhật.
 router.put("/:id/read", verifyToken, markAsRead);
 
 export default router;

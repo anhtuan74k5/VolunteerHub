@@ -18,6 +18,7 @@ import statisticsRoutes from "./routes/statistics.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import postRoutes from "./routes/post.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
+import eventActionRoutes from "./routes/eventAction.routes.js";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -55,6 +56,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes); // Routes xác thực người dùng
 app.use("/api/admin", adminRoutes); // Routes cho admin
 app.use("/api/events", eventRoutes); // Routes quản lý sự kiện
+app.use("/api/actions", eventActionRoutes); // Routes cho các hành động trên sự kiện
 app.use("/api/registrations", registrationRoutes); // Routes quản lý đăng ký
 app.use("/api/posts", postRoutes); // Routes cho Post
 app.use("/api/comments", commentRoutes); // Routes cho Comment
