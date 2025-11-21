@@ -3,6 +3,7 @@ import { verifyToken } from "../middlewares/auth.js";
 import {
   handleEventAction,
   getUserActionStatus,
+  getEventStats,
 } from "../controllers/eventAction.controller.js";
 
 const router = express.Router();
@@ -26,5 +27,12 @@ router.post("/:eventId", verifyToken, handleEventAction);
 // - Trả về: { "hasLiked": true } hoặc { "hasLiked": false }
 // - Mục đích Frontend: Để tô đỏ nút "Tim" nếu user đã like trước đó.
 router.get("/:eventId/status", verifyToken, getUserActionStatus);
+
+// [GET] /api/actions/:eventId/stats
+// 📊 Lấy dữ liệu thống kê tương tác (Public API)
+// - Chức năng: Lấy tổng số lượt Tim, Chia sẻ và Xem hiện tại của sự kiện.
+// - Trả về: { "likesCount": 10, "sharesCount": 5, "viewsCount": 100 }
+// - Mục đích Frontend: Dùng để Auto-reload (Polling) số liệu trên giao diện mà không cần tải lại toàn bộ trang.
+router.get("/:eventId/stats", getEventStats);
 
 export default router;

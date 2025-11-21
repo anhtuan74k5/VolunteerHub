@@ -5,7 +5,7 @@ import express from "express"; // Framework web chính
 import dotenv from "dotenv"; // Để quản lý biến môi trường từ file .env
 import cors from "cors"; // Middleware để xử lý Cross-Origin Resource Sharing
 import { connectDB } from "./config/db.js"; // Hàm kết nối đến MongoDB
-
+import { startCronJobs } from "./utils/cronJob.js"; // Hàm khởi động các cron jobs
 // =================================================================================================
 // Import các file routes
 // =================================================================================================
@@ -44,6 +44,7 @@ app.use(express.json());
 // =================================================================================================
 await connectDB();
 
+startCronJobs();
 // =================================================================================================
 // Định nghĩa Routes
 // =================================================================================================

@@ -32,11 +32,23 @@ const rollbackEventUploads = (req) => {
   }
 };
 
-// Hàm xóa file ảnh khỏi ổ đĩa khi xóa sự kiện
+export const processEventCompletion = async (event) => {
+  if (event.status === "completed") return;
+
+  await User.findByIdAndUpdate(event.createdBy, {
+    $inc: { points: event.points },
+  });
+
+  event.status = "completed";
+  event.endDate = new Date();
+
+  await event.save();
+
+  return event;
+};
 const deleteEventFiles = (event) => {
   const defaultCover = "default-event-image.jpg";
 
-  // 1. Xóa Cover Image
   if (
     event.coverImage &&
     event.coverImage !== defaultCover &&
@@ -51,7 +63,6 @@ const deleteEventFiles = (event) => {
     }
   }
 
-  // 2. Xóa Gallery Images
   if (event.galleryImages && event.galleryImages.length > 0) {
     event.galleryImages.forEach((img) => {
       if (img && !img.startsWith("http")) {
@@ -281,8 +292,7 @@ export const deleteEvent = async (req, res) => {
   }
 };
 
-// [PUT] /api/events/:id/complete -> Hoàn thành & Cộng điểm
-// [PUT] /api/events/:id/complete -> Hoàn thành & Cộng điểm
+// [PUT] /api/events/:id/complete
 export const completeEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
@@ -291,12 +301,13 @@ export const completeEvent = async (req, res) => {
     if (!event)
       return res.status(404).json({ message: "Không tìm thấy sự kiện" });
 
-    // Kiểm tra quyền của Manager
+    // Kiểm tra quyền Manager
     if (event.createdBy.toString() !== req.user._id.toString()) {
       return res
         .status(403)
         .json({ message: "Bạn không có quyền cập nhật sự kiện này" });
     }
+
     // Kiểm tra trạng thái
     if (event.status !== "approved") {
       return res
@@ -309,35 +320,11 @@ export const completeEvent = async (req, res) => {
         .json({ message: "Sự kiện đã hoàn thành trước đó rồi." });
     }
 
-    // 👇 1. CỘNG ĐIỂM CHO MANAGER (Người tạo)
-    // Logic cũ: Manager +20đ cứng.
-    // Nếu bạn muốn Manager cũng nhận điểm theo loại sự kiện thì sửa '20' thành 'event.points'
-    await User.findByIdAndUpdate(event.createdBy, { $inc: { points: 20 } });
-
-    // 👇 2. CỘNG ĐIỂM CHO CÁC VOLUNTEER ĐÃ ĐƯỢC DUYỆT
-    const approvedRegistrations = await Registration.find({
-      event: eventId,
-      status: "approved",
-    });
-
-    const volunteerIds = approvedRegistrations.map((reg) => reg.volunteer);
-
-    if (volunteerIds.length > 0) {
-      // ⚠️ SỬA LẠI Ở ĐÂY:
-      // Thay vì cộng 10, ta cộng 'event.points' (điểm quy định của sự kiện đó)
-      await User.updateMany(
-        { _id: { $in: volunteerIds } },
-        { $inc: { points: event.points } }
-      );
-    }
-
-    // Cập nhật trạng thái sự kiện
-    event.status = "completed";
-    event.endDate = new Date();
-    await event.save();
+    // 👇 GỌI HÀM XỬ LÝ CHUNG
+    await processEventCompletion(event);
 
     res.status(200).json({
-      message: `Sự kiện hoàn thành. Manager +20 điểm. ${volunteerIds.length} tình nguyện viên +${event.points} điểm.`,
+      message: "Sự kiện hoàn thành. Manager đã được cộng 20 điểm.",
       event: event,
     });
   } catch (err) {

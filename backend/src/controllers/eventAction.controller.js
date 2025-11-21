@@ -54,7 +54,7 @@ export const handleEventAction = async (req, res) => {
 
       // 2. Tạo link sự kiện
       // Lấy domain từ biến môi trường hoặc mặc định localhost
-      const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+      const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
       const shareLink = `${clientUrl}/su-kien/${eventId}`;
 
       // 3. Trả về Link cho Frontend
@@ -89,6 +89,35 @@ export const getUserActionStatus = async (req, res) => {
     });
 
     res.status(200).json({ hasLiked: !!liked });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+// [GET] /api/actions/:eventId/stats
+// 📊 API lấy số liệu thống kê + Link chia sẻ (Public)
+export const getEventStats = async (req, res) => {
+  try {
+    const eventId = req.params.eventId;
+
+    // Chỉ lấy các trường số liệu cần thiết
+    const event = await Event.findById(eventId).select(
+      "likesCount sharesCount viewsCount"
+    );
+
+    if (!event) {
+      return res.status(404).json({ message: "Sự kiện không tồn tại" });
+    }
+
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+    const shareLink = `${clientUrl}/events/${eventId}`;
+
+    res.status(200).json({
+      likesCount: event.likesCount,
+      sharesCount: event.sharesCount,
+      viewsCount: event.viewsCount,
+      shareLink: shareLink,
+    });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
