@@ -19,8 +19,6 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 
     useEffect(() => {
         if (user) {
-            console.log("USER AVATAR FROM API: ", user.avatar);
-
             setEditData({
                 username: user.username || "",
                 name: user.name || "",
@@ -74,6 +72,7 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
             setEditMode(false);
             onUserUpdated(res.data.user);
             setAvatarFile(null);
+            window.location.reload();
         } catch (err) {
             Swal.fire({
                 title: "Lỗi!",

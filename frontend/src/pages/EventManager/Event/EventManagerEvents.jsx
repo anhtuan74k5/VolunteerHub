@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Table, Input, Button, message, Tag } from 'antd';
 import { debounce } from 'lodash';
-import { GetManagerEvents, DeleteEvents } from '../../../services/EventManagerService';
+import { GetManagerEvents, DeleteEvents, GetEventDetail } from '../../../services/EventManagerService';
 import { ReloadOutlined, EditOutlined } from '@ant-design/icons';
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -19,10 +19,29 @@ export default function EventManagerEvents() {
     const fetchEvents = async () => {
         setLoading(true);
         try {
-            const res = await GetManagerEvents();
-            if (res.status === 200) {
-                setData(res.data);
-                setOriginalData(res.data);
+            const resList = await GetManagerEvents();
+            if (resList.status === 200) {
+                const listEvents = resList.data;
+
+                const detailedEvents = await Promise.all(
+                    listEvents.map(async (event) => {
+                        try {
+                            const resDetail = await GetEventDetail(event._id);
+                            if (resDetail.status === 200) {
+                                return {
+                                    ...event,
+                                    stats: resDetail.data.stats || { totalRegistrations: 0, approvedCount: 0 }
+                                };
+                            }
+                        } catch (err) {
+                            console.error(`Lỗi lấy chi tiết sự kiện ${event._id}:`, err);
+                        }
+                        return { ...event, stats: { totalRegistrations: 0, approvedCount: 0 } };
+                    })
+                );
+
+                setData(detailedEvents);
+                setOriginalData(detailedEvents);
             }
         } catch (error) {
             console.error('Lỗi khi lấy danh sách sự kiện:', error);
@@ -98,43 +117,69 @@ export default function EventManagerEvents() {
         {
             title: 'Tên sự kiện',
             dataIndex: 'name',
+            key: 'name',
             sorter: (a, b) => a.name?.toLowerCase().localeCompare(b.name?.toLowerCase()),
         },
         {
             title: 'Ngày',
             dataIndex: 'date',
+            key: 'date',
+            width: 120,
             sorter: (a, b) => new Date(a.date) - new Date(b.date),
             render: (date) => new Date(date).toLocaleDateString(),
+            align: 'center',
         },
         {
             title: 'Địa điểm',
             dataIndex: 'location',
+            key: 'location',
+            width: 150,
             sorter: (a, b) => (a.location ?? '').toLowerCase().localeCompare((b.location ?? '').toLowerCase()),
-            render: (text) => text || '—',
+            render: (text) => <span className="truncate block max-w-[150px]">{text || '—'}</span>,
         },
-
         {
-            title: 'Số lượng tham gia',
-            dataIndex: 'currentParticipants',
-            render: (count, event) => (
+            title: 'SL đăng ký',
+            key: 'totalRegistrations',
+            width: 130,
+            render: (_, event) => (
                 <Button
                     type="link"
                     className="!font-semibold !text-blue-600 hover:scale-110 transition-transform duration-150"
                     onClick={() => navigate(`/quanlisukien/su-kien/${event._id}/participants`)}
                 >
-                    {count ?? 0}
+                    {event.stats?.totalRegistrations ?? 0}
                 </Button>
-            )
+            ),
+            sorter: (a, b) => (a.stats?.totalRegistrations ?? 0) - (b.stats?.totalRegistrations ?? 0),
+            align: 'center',
         },
         {
-            title: 'Số lượng tối đa',
+            title: 'SL đã duyệt',
+            key: 'approvedCount',
+            width: 130,
+            render: (_, event) => (
+                <span className="font-medium text-gray-700">
+                    {event.stats?.approvedCount ?? 0}
+                </span>
+            ),
+            sorter: (a, b) => (a.stats?.approvedCount ?? 0) - (b.stats?.approvedCount ?? 0),
+            align: 'center',
+        },
+        {
+            title: 'Giới hạn',
             dataIndex: 'maxParticipants',
+            key: 'maxParticipants',
+            width: 100,
             sorter: (a, b) => (a.maxParticipants ?? 0) - (b.maxParticipants ?? 0),
             render: (count) => count ?? '—',
+            align: 'center',
         },
         {
             title: 'Trạng thái',
             dataIndex: 'status',
+            key: 'status',
+            width: 120,
+            align: 'center',
             render: (status) => {
                 const color = {
                     pending: '!text-[#DDB958]',
@@ -151,30 +196,26 @@ export default function EventManagerEvents() {
         },
         {
             title: 'Thao tác',
+            key: 'action',
             align: 'center',
+            width: 100,
             render: (_, event) => (
-                <>
+                <div className="flex justify-center gap-2">
                     <Button
                         type="text"
                         danger
-                        icon={
-                            <FontAwesomeIcon
-                                icon={faTrash}
-                                className="text-red-500 hover:text-red-700 text-lg"
-                            />
-                        }
+                        icon={<FontAwesomeIcon icon={faTrash} className="text-red-500 hover:text-red-700 text-lg" />}
                         onClick={() => handleDeleteEvent(event._id, event.name)}
                     />
                     <Button
                         type="text"
-                        icon={<EditOutlined className="text-blue-500 hover:text-blue-700 text-lg" />}
+                        icon={<EditOutlined className="!text-blue-500 !hover:text-blue-700 !text-lg" />}
                         onClick={() => handleEditEvent(event._id)}
                     />
-                </>
+                </div>
             )
         }
     ];
-
 
     return (
         <div>
@@ -197,6 +238,7 @@ export default function EventManagerEvents() {
                 loading={loading}
                 pagination={{ pageSize: 8 }}
                 className='shadow shadow-md rounded-md'
+                scroll={{ x: 1000 }}
             />
         </div>
     );

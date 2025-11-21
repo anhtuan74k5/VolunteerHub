@@ -61,6 +61,10 @@ const UserReducer = createSlice({
         updateProfile: (state, action) => {
             state.user = { ...state.user, ...action.payload };
         },
+
+        setUser: (state, action) => {
+            state.user = action.payload;
+        },
     },
 });
 
@@ -74,6 +78,7 @@ export const {
     openForgetPassword,
     forgetPasswordSuccess,
     updateProfile,
+    setUser
 } = UserReducer.actions;
 
 export default UserReducer.reducer;

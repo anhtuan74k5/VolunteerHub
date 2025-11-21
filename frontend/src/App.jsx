@@ -16,7 +16,7 @@ import EventManagerEvents from "./pages/EventManager/Event/EventManagerEvents";
 import CreateEvent from "./pages/EventManager/Event/CreatEvents";
 import AdminEventDetail from "./pages/Admin/Events/AdminEventDetail";
 import Participants from "./pages/EventManager/Participant/Participant";
-// import EditEvent from "./pages/EventManager/Event/EditEvent";
+import EditEvent from "./pages/EventManager/Event/EditEvent";
 
 class App extends Component {
   render() {
@@ -46,7 +46,7 @@ class App extends Component {
             <Route path="su-kien/:eventId/participants" element={<Participants />} />
             <Route path="su-kien" element={<EventManagerEvents />} />
             <Route path="su-kien/tao" element={<CreateEvent />} />
-            {/* <Route path="su-kien/sua/:eventId" element={<EditEvent />} /> */}
+            <Route path="su-kien/sua/:eventId" element={<EditEvent />} />
             <Route path="su-kien/:eventId" element={<AdminEventDetail />} />
           </Route>
         </Routes>

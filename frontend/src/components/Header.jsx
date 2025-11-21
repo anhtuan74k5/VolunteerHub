@@ -9,13 +9,14 @@ import Login from "./Login";
 import Register from "./Register";
 import ForgetPassword from "./ForgetPassword";
 import { useDispatch, useSelector } from "react-redux";
-import { openLogin, logout } from "../redux/reducers/UserReducer";
+import { openLogin, logout, setUser } from "../redux/reducers/UserReducer";
 import { Dropdown, Menu } from "antd";
 import { removeLocalStorage, SwalConfig } from "../utils/Configs";
 import { LOCALSTORAGE_USER } from "../utils/Constants";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRightFromBracket, faUser } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
+import { GetUserInfo } from "../services/UserService";
 
 export default function Header() {
   const dispatch = useDispatch();
@@ -74,6 +75,22 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await GetUserInfo();
+        if (res?.data) {
+          dispatch(setUser(res.data));
+        }
+      } catch (err) {
+        console.error("Không thể lấy thông tin người dùng:", err);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
 
   return (
     <header

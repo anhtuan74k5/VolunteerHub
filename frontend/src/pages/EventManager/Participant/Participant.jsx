@@ -137,13 +137,13 @@ export default function Participants() {
             dataIndex: "status",
             render: (status) => {
                 const color = {
-                    pending: "text-[#DDB958]",
-                    completed: "text-blue-500",
-                    approved: "text-green-500",
-                }[status] || "text-red-500";
+                    pending: "!text-[#DDB958]",
+                    completed: "!text-blue-500",
+                    approved: "!text-green-500",
+                }[status] || "!text-red-500";
 
                 return (
-                    <Tag className={`ml-0 pl-0 border-none bg-transparent font-semibold text-[14px] ${color}`}>
+                    <Tag className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}>
                         {status.toUpperCase()}
                     </Tag>
                 );

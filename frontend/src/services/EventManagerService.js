@@ -9,3 +9,4 @@ export const GetApprovedParticipants = (eventId) => http.get(`/events/public/${e
 export const GetParticipants = (eventId) => http.get(`registrations/${eventId}/participants`)
 export const UpdateParticipantStatus = (registrationId, status) => http.put(`registrations/${registrationId}/status`, { status })
 export const MarkCompletedParticipants = (registrationId) => http.put(`registrations/${registrationId}/complete`)
+export const GetEventDetail = (eventId) => http.get(`events/management/${eventId}`)

@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { GetEventDetail } from "../../../services/EventService";
+import { GetEventDetail } from "../../../services/AdminService";
 import { Calendar, Users, MapPin, Tag, Phone } from "lucide-react";
+
+const categoryMapping = {
+    Community: "Cộng đồng",
+    Education: "Giáo dục",
+    Healthcare: "Sức khỏe",
+    Environment: "Môi trường",
+    EventSupport: "Sự kiện",
+    Technical: "Kỹ thuật",
+    Emergency: "Cứu trợ khẩn cấp",
+    Online: "Trực tuyến",
+    Corporate: "Doanh nghiệp"
+};
 
 export default function AdminEventDetail() {
     const { eventId } = useParams();
@@ -23,7 +35,6 @@ export default function AdminEventDetail() {
         load();
     }, [eventId]);
 
-
     if (loading) return <p className="text-center mt-10 text-lg">Đang tải...</p>;
     if (!event) return <p className="text-center mt-10 text-lg text-red-500">Không tìm thấy sự kiện!</p>;
 
@@ -39,14 +50,33 @@ export default function AdminEventDetail() {
 
         galleryImages.forEach((img, index) => {
             const realUrl = `http://localhost:5000${img}`;
-            html = html.replaceAll(`{{image_${index}}}`, realUrl);
+            const placeholder = `[IMAGE_PLACEHOLDER_${index}]`;
+
+            // Ảnh căn giữa
+            const imgTag = `
+            <div style="
+                text-align: center; 
+                margin: 20px 0;
+            ">
+                <img 
+                    src="${realUrl}" 
+                    style="
+                        max-width: 100%; 
+                        height: auto; 
+                        border-radius: 8px;
+                    "
+                />
+            </div>
+        `;
+
+            html = html.replaceAll(placeholder, imgTag);
         });
 
         return html;
     };
 
     return (
-        <div className="w-full  bg-white  rounded-2xl overflow-hidden text-[#111827]">
+        <div className="w-full bg-white rounded-2xl overflow-hidden text-[#111827]">
             {/* Tiêu đề */}
             <h1 className="text-4xl sm:text-4xl font-bold px-6 pt-8">{event.name}</h1>
 
@@ -80,7 +110,7 @@ export default function AdminEventDetail() {
                     <div className="flex items-center gap-3">
                         <Tag size={20} />
                         <span>
-                            <strong>Loại sự kiện:</strong> {event.category || "Khác"}
+                            <strong>Loại sự kiện:</strong> {categoryMapping[event.category] || event.category || "Khác"}
                         </span>
                     </div>
 
@@ -122,12 +152,11 @@ export default function AdminEventDetail() {
             <div className="px-6 pb-12">
                 <h2 className="text-3xl font-semibold mb-4">Mô tả sự kiện</h2>
                 <div
-                    className="prose prose-lg max-w-none"
+                    className="prose prose-lg max-w-none prose-img:m-auto"
                     dangerouslySetInnerHTML={{
                         __html: renderDescription(event.description, event.galleryImages)
                     }}
                 />
-
             </div>
         </div>
     );

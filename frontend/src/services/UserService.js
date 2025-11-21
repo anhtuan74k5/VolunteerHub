@@ -15,3 +15,5 @@ export const UpdateUser = (userData) => http.put(`/auth/update`, userData);
 export const Registration = (eventId) => http.post(`/registrations/${eventId}`);
 export const CancelRegistration = (eventId) => http.delete(`/registrations/${eventId}`);
 export const GetMyEvent = () => http.get(`/registrations/history/my`)
+export const EventActions = (eventId, data) => http.post(`/actions/${eventId}`, data)
+export const CheckEventStatus = (eventId) => http.get(`/actions/${eventId}/status`)

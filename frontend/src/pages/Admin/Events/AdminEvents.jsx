@@ -92,7 +92,7 @@ export default function AdminEvents() {
     };
 
     const handleEventDetail = (eventId) => {
-        navigate(`/admin/quan-tri/su-kien/${eventId}`);
+        navigate(`/admin/su-kien/${eventId}`);
     };
 
     const columns = [

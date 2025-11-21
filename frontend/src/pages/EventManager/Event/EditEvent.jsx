@@ -1,257 +1,291 @@
-// import { useState, useEffect, useRef } from "react";
-// import { Form, Input, Button, DatePicker, Select, Upload, Spin } from "antd";
-// import { GetEventById, UpdateEvents } from "../../../services/EventManagerService";
-// import { UploadOutlined } from "@ant-design/icons";
-// import Swal from "sweetalert2";
-// import { useParams, useNavigate } from "react-router-dom";
-// import dayjs from "dayjs";
+import { useState, useEffect, useRef } from "react";
+import { Form, Input, Button, DatePicker, Select, Upload, InputNumber, Spin } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
+import Swal from "sweetalert2";
+import { useParams, useNavigate } from "react-router-dom";
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
+import { GetEventDetail, UpdateEvents } from "../../../services/EventManagerService";
+import dayjs from "dayjs";
 
-// const { Option } = Select;
+const { Option } = Select;
 
-// export default function EditEvent() {
-//     const { eventId } = useParams();
-//     const [form] = Form.useForm();
-//     const navigate = useNavigate();
+export default function EditEvent() {
+    const { eventId } = useParams();
+    const [form] = Form.useForm();
+    const navigate = useNavigate();
 
-//     const [loading, setLoading] = useState(true);
-//     const [description, setDescription] = useState("");
-//     const editorRef = useRef(null);
+    const [loading, setLoading] = useState(true);
+    const [description, setDescription] = useState("");
+    const [galleryImages, setGalleryImages] = useState([]);
+    const [editorInstance, setEditorInstance] = useState(null);
+    const galleryCounterRef = useRef(0);
 
-//     // --- Chuẩn hóa file upload ---
-//     const normFile = (e) => {
-//         if (Array.isArray(e)) return e;
-//         return e?.fileList || [];
-//     };
+    const volunteerCategories = [
+        { label: "Cộng đồng", value: "Community" },
+        { label: "Giáo dục", value: "Education" },
+        { label: "Sức khỏe", value: "Healthcare" },
+        { label: "Môi trường", value: "Environment" },
+        { label: "Sự kiện", value: "EventSupport" },
+        { label: "Kỹ thuật", value: "Technical" },
+        { label: "Cứu trợ khẩn cấp", value: "Emergency" },
+        { label: "Trực tuyến", value: "Online" },
+        { label: "Doanh nghiệp", value: "Corporate" }
+    ];
 
-//     // --- Convert fileList thành file thật ---
-//     const handleCoverImage = (fileList) =>
-//         fileList?.length ? fileList[0].originFileObj : null;
+    const convertImgURLToFile = async (url, filename = null) => {
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const name = filename || `pasted_${Date.now()}`;
+            return new File([blob], `${name}.${blob.type.split("/")[1]}`, { type: blob.type });
+        } catch (err) {
+            console.error("Convert failed:", err);
+            return null;
+        }
+    };
 
-//     const handleGalleryImages = (fileList) =>
-//         Array.isArray(fileList)
-//             ? fileList.map((f) => f.originFileObj)
-//             : [];
+    const onEditorReady = (editor) => {
+        setEditorInstance(editor);
 
-//     // --- Lấy dữ liệu sự kiện cần sửa ---
-//     useEffect(() => {
-//         const fetchEvent = async () => {
-//             try {
-//                 const res = await GetEventById(eventId);
-//                 if (res.status === 200) {
-//                     const event = res.data;
+        editor.editing.view.document.on("clipboardInput", async (evt, data) => {
+            const html = data.dataTransfer.getData("text/html");
+            if (!html || !html.includes("<img")) return;
 
-//                     // Bind vào form
-//                     form.setFieldsValue({
-//                         name: event.name,
-//                         location: event.location,
-//                         category: event.category,
-//                         maxParticipants: event.maxParticipants,
-//                         date: dayjs(event.date),
-//                         endDate: event.endDate ? dayjs(event.endDate) : null,
-//                     });
+            const temp = document.createElement("div");
+            temp.innerHTML = html;
 
-//                     setDescription(event.description || "");
-//                 }
-//             } catch (error) {
-//                 console.error(error);
-//                 Swal.fire("Lỗi", "Không thể tải dữ liệu sự kiện", "error");
-//             }
-//             setLoading(false);
-//         };
+            const imgTags = temp.querySelectorAll("img");
+            const newFiles = [];
 
-//         fetchEvent();
-//     }, [eventId, form]);
+            for (const img of imgTags) {
+                const src = img.src;
+                const index = galleryCounterRef.current + newFiles.length;
+                const file = await convertImgURLToFile(src, `pasted_img_${index}`);
+                if (file) newFiles.push(file);
+            }
 
-//     // --- Xử lý paste trong trình soạn thảo ---
-//     const handlePaste = (e) => {
-//         e.preventDefault();
-//         const html = e.clipboardData.getData("text/html");
-//         const text = e.clipboardData.getData("text/plain");
-//         const content = html || text;
-//         if (content) {
-//             document.execCommand("insertHTML", false, content);
-//         }
-//     };
+            if (newFiles.length > 0) {
+                galleryCounterRef.current += newFiles.length;
+                setGalleryImages(prev => [...prev, ...newFiles]);
+            }
+        });
+    };
 
-//     // --- Gửi request cập nhật sự kiện ---
-//     const handleUpdateEvent = async (values) => {
-//         try {
-//             const eventData = {
-//                 ...values,
-//                 description,
-//                 date: values.date.format("YYYY-MM-DD"),
-//                 endDate: values.endDate ? values.endDate.format("YYYY-MM-DD") : null,
-//                 coverImage: handleCoverImage(values.coverImage),
-//                 galleryImages: handleGalleryImages(values.galleryImages),
-//             };
+    const renderDescription = (description, galleryImages) => {
+        if (!description || !galleryImages) return description;
 
-//             const formData = new FormData();
-//             Object.keys(eventData).forEach((key) => {
-//                 if (Array.isArray(eventData[key])) {
-//                     eventData[key].forEach((item) => formData.append(key, item));
-//                 } else {
-//                     formData.append(key, eventData[key]);
-//                 }
-//             });
+        let html = description;
 
-//             const res = await UpdateEvents(eventId, formData);
+        galleryImages.forEach((img, index) => {
+            const realUrl = img.url ? img.url : `http://localhost:5000${img}`;
+            const placeholder = `[IMAGE_PLACEHOLDER_${index}]`;
+            const imgTag = `<img src="${realUrl}" style="max-width:100%; border-radius:6px;" />`;
+            html = html.replaceAll(placeholder, imgTag);
+        });
 
-//             if (res.status === 200) {
-//                 Swal.fire("Thành công!", "Sự kiện đã được cập nhật", "success");
-//                 navigate("/admin/su-kien");
-//             } else {
-//                 Swal.fire("Lỗi", "Không thể cập nhật sự kiện", "error");
-//             }
-//         } catch (error) {
-//             console.error(error);
-//             Swal.fire("Lỗi", "Đã xảy ra lỗi khi cập nhật", "error");
-//         }
-//     };
+        return html;
+    };
 
-//     if (loading)
-//         return (
-//             <div className="w-full flex justify-center py-10">
-//                 <Spin size="large" />
-//             </div>
-//         );
+    const buildDescriptionWithPlaceholder = () => {
+        if (!editorInstance) return "";
 
-//     return (
-//         <div>
-//             <h2 className="text-2xl font-bold mb-4">Chỉnh sửa sự kiện</h2>
+        const html = editorInstance.getData();
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
 
-//             <Form
-//                 form={form}
-//                 layout="vertical"
-//                 onFinish={handleUpdateEvent}
-//             >
-//                 <Form.Item
-//                     label="Tên sự kiện"
-//                     name="name"
-//                     rules={[{ required: true, message: "Vui lòng nhập tên sự kiện" }]}
-//                 >
-//                     <Input placeholder="Tên sự kiện" size="large" />
-//                 </Form.Item>
+        const imgTags = temp.querySelectorAll("img");
 
-//                 {/* Mô tả HTML */}
-//                 <Form.Item
-//                     label="Mô tả chi tiết"
-//                     name="description"
-//                     rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
-//                 >
-//                     <div
-//                         ref={editorRef}
-//                         contentEditable
-//                         suppressContentEditableWarning
-//                         onInput={(e) => {
-//                             const html = e.currentTarget.innerHTML;
-//                             setDescription(html);
-//                             form.setFieldsValue({ description: html });
-//                         }}
-//                         onPaste={handlePaste}
-//                         style={{
-//                             border: "1px solid #d9d9d9",
-//                             borderRadius: "6px",
-//                             padding: "16px",
-//                             minHeight: "400px",
-//                             maxHeight: "600px",
-//                             overflowY: "auto",
-//                             backgroundColor: "#fff",
-//                             fontFamily: "Georgia, serif",
-//                             fontSize: "16px",
-//                             lineHeight: "1.8",
-//                             color: "#333",
-//                             outline: "none",
-//                         }}
-//                         dangerouslySetInnerHTML={{ __html: description }}
-//                     />
-//                 </Form.Item>
+        imgTags.forEach((img, index) => {
+            const placeholder = `[IMAGE_PLACEHOLDER_${index}]`;
+            img.replaceWith(document.createTextNode(placeholder));
+        });
 
-//                 <Form.Item
-//                     label="Ngày bắt đầu"
-//                     name="date"
-//                     rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
-//                 >
-//                     <DatePicker style={{ width: "100%" }} size="large" />
-//                 </Form.Item>
+        return temp.innerHTML;
+    };
 
-//                 <Form.Item
-//                     label="Ngày kết thúc"
-//                     name="endDate"
-//                     rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
-//                 >
-//                     <DatePicker style={{ width: "100%" }} size="large" />
-//                 </Form.Item>
+    useEffect(() => {
+        const fetchEvent = async () => {
+            try {
+                const res = await GetEventDetail(eventId);
+                if (res.status === 200) {
+                    const event = res.data;
 
-//                 <Form.Item
-//                     label="Địa điểm"
-//                     name="location"
-//                     rules={[{ required: true, message: "Vui lòng nhập địa điểm" }]}
-//                 >
-//                     <Input placeholder="Địa điểm" size="large" />
-//                 </Form.Item>
+                    form.setFieldsValue({
+                        name: event.name,
+                        location: event.location,
+                        category: event.category,
+                        maxParticipants: event.maxParticipants,
+                        date: dayjs(event.date),
+                        endDate: event.endDate ? dayjs(event.endDate) : null
+                    });
 
-//                 <Form.Item label="Loại sự kiện" name="category">
-//                     <Select size="large">
-//                         <Option value="Tình nguyện">Tình nguyện</Option>
-//                         <Option value="Hội thảo">Hội thảo</Option>
-//                         <Option value="Giải trí">Giải trí</Option>
-//                     </Select>
-//                 </Form.Item>
+                    const galleryFiles = event.galleryImages.map((img, i) => ({
+                        uid: `${i}`,
+                        name: `gallery_${i}.jpg`,
+                        status: "done",
+                        url: `http://localhost:5000${img}`
+                    }));
+                    setGalleryImages(galleryFiles);
 
-//                 <Form.Item
-//                     label="Số lượng tối đa"
-//                     name="maxParticipants"
-//                 >
-//                     <Input type="number" min={1} size="large" />
-//                 </Form.Item>
+                    const updatedDescription = renderDescription(event.description, event.galleryImages);
+                    setDescription(updatedDescription);
 
-//                 {/* Ảnh bìa */}
-//                 <Form.Item
-//                     label="Ảnh bìa (chọn nếu muốn thay)"
-//                     name="coverImage"
-//                     valuePropName="fileList"
-//                     getValueFromEvent={normFile}
-//                 >
-//                     <Upload
-//                         listType="picture"
-//                         beforeUpload={() => false}
-//                         accept="image/*"
-//                         maxCount={1}
-//                     >
-//                         <Button icon={<UploadOutlined />} size="large">
-//                             Chọn ảnh bìa
-//                         </Button>
-//                     </Upload>
-//                 </Form.Item>
+                    if (event.coverImage) {
+                        form.setFieldValue("coverImage", [
+                            {
+                                uid: "-1",
+                                name: "cover.jpg",
+                                status: "done",
+                                url: `http://localhost:5000${event.coverImage}`
+                            }
+                        ]);
+                    }
+                }
+            } catch (err) {
+                Swal.fire("Lỗi", "Không thể tải dữ liệu sự kiện", "error");
+            }
+            setLoading(false);
+        };
 
-//                 {/* Album ảnh */}
-//                 <Form.Item
-//                     label="Ảnh album (chọn nếu muốn thay)"
-//                     name="galleryImages"
-//                     valuePropName="fileList"
-//                     getValueFromEvent={normFile}
-//                 >
-//                     <Upload
-//                         listType="picture-card"
-//                         beforeUpload={() => false}
-//                         accept="image/*"
-//                         multiple
-//                     >
-//                         <Button icon={<UploadOutlined />}>Thêm ảnh</Button>
-//                     </Upload>
-//                 </Form.Item>
+        fetchEvent();
+    }, [eventId]);
 
-//                 <Form.Item>
-//                     <Button
-//                         type="primary"
-//                         htmlType="submit"
-//                         size="large"
-//                         style={{ width: "100%", background: "#DDB958" }}
-//                     >
-//                         Cập nhật sự kiện
-//                     </Button>
-//                 </Form.Item>
-//             </Form>
-//         </div>
-//     );
-// }
+    const handleUpdateEvent = async (values) => {
+        try {
+            const formData = new FormData();
+            const descriptionWithPlaceholder = buildDescriptionWithPlaceholder();
+
+            formData.append("name", values.name);
+            formData.append("location", values.location);
+            formData.append("category", values.category);
+            formData.append("maxParticipants", values.maxParticipants);
+            formData.append("date", values.date.format("YYYY-MM-DD"));
+            formData.append("endDate", values.endDate?.format("YYYY-MM-DD"));
+            formData.append("description", descriptionWithPlaceholder);
+
+            // Cover image
+            const cover = values.coverImage?.[0];
+            if (cover) {
+                if (cover.originFileObj) {
+                    formData.append("coverImage", cover.originFileObj);
+                } else {
+                    const file = await convertImgURLToFile(cover.url, "old_cover");
+                    formData.append("coverImage", file);
+                }
+            }
+
+            // Gallery images
+            for (let i = 0; i < galleryImages.length; i++) {
+                const img = galleryImages[i];
+
+                if (img.originFileObj) {
+                    formData.append("galleryImages", img.originFileObj);
+                } else {
+                    const file = await convertImgURLToFile(img.url, `gallery_old_${i}`);
+                    formData.append("galleryImages", file);
+                }
+            }
+
+            const res = await UpdateEvents(eventId, formData);
+
+            if (res.status === 200) {
+                Swal.fire("Thành công", "Cập nhật sự kiện thành công", "success");
+                navigate("/quanlisukien/su-kien");
+            } else {
+                Swal.fire("Lỗi", "Cập nhật thất bại", "error");
+            }
+        } catch (err) {
+            Swal.fire("Lỗi", "Đã xảy ra lỗi", "error");
+        }
+    };
+
+    if (loading)
+        return (
+            <div className="w-full flex justify-center py-10">
+                <Spin size="large" />
+            </div>
+        );
+
+    return (
+        <div>
+            <h2 className="text-2xl font-bold mb-4">Chỉnh sửa sự kiện</h2>
+
+            <Form form={form} layout="vertical" onFinish={handleUpdateEvent}>
+
+                <Form.Item label="Tên sự kiện" name="name" rules={[{ required: true }]}>
+                    <Input size="large" />
+                </Form.Item>
+
+                <Form.Item label="Mô tả chi tiết" required>
+                    <CKEditor
+                        editor={ClassicEditor}
+                        data={description}
+                        onReady={onEditorReady}
+                        onChange={(e, editor) => setDescription(editor.getData())}
+                    />
+                </Form.Item>
+
+                <Form.Item label="Ngày bắt đầu" name="date" rules={[{ required: true }]}>
+                    <DatePicker size="large" style={{ width: "100%" }} />
+                </Form.Item>
+
+                <Form.Item label="Ngày kết thúc" name="endDate">
+                    <DatePicker size="large" style={{ width: "100%" }} />
+                </Form.Item>
+
+                <Form.Item label="Địa điểm" name="location" rules={[{ required: true }]}>
+                    <Input size="large" />
+                </Form.Item>
+
+                {/* --- CATEGORY --- */}
+                <Form.Item label="Loại sự kiện" name="category" rules={[{ required: true }]}>
+                    <Select size="large">
+                        {volunteerCategories.map(option => (
+                            <Option key={option.value} value={option.value}>
+                                {option.label}
+                            </Option>
+                        ))}
+                    </Select>
+                </Form.Item>
+
+                <Form.Item label="Số lượng tối đa" name="maxParticipants">
+                    <InputNumber min={1} size="large" style={{ width: "100%" }} />
+                </Form.Item>
+
+                <Form.Item
+                    label="Ảnh bìa"
+                    name="coverImage"
+                    valuePropName="fileList"
+                    getValueFromEvent={(e) => e?.fileList || []}
+                >
+                    <Upload beforeUpload={() => false} listType="picture" maxCount={1}>
+                        <Button icon={<UploadOutlined />}>Chọn ảnh bìa</Button>
+                    </Upload>
+                </Form.Item>
+
+                <Form.Item
+                    label="Album ảnh"
+                    name="galleryImages"
+                    valuePropName="fileList"
+                    getValueFromEvent={(e) => e?.fileList || []}
+                >
+                    <Upload beforeUpload={() => false} listType="picture-card" multiple>
+                        <UploadOutlined />
+                    </Upload>
+                </Form.Item>
+
+                <Form.Item>
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        size="large"
+                        style={{ width: "100%", background: "#DDB958" }}
+                    >
+                        Cập nhật sự kiện
+                    </Button>
+                </Form.Item>
+            </Form>
+        </div>
+    );
+}

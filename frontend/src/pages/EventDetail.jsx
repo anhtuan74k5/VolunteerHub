@@ -5,6 +5,19 @@ import { Calendar, Users, MapPin, Tag, Phone } from "lucide-react";
 import { Registration, CancelRegistration, GetMyEvent } from "../services/UserService";
 import Swal from "sweetalert2";
 
+// Ánh xạ từ tiếng Anh sang tiếng Việt cho category
+const categoryMapping = {
+    Community: "Cộng đồng",
+    Education: "Giáo dục",
+    Healthcare: "Sức khỏe",
+    Environment: "Môi trường",
+    EventSupport: "Sự kiện",
+    Technical: "Kỹ thuật",
+    Emergency: "Cứu trợ khẩn cấp",
+    Online: "Trực tuyến",
+    Corporate: "Doanh nghiệp"
+};
+
 export default function EventDetail() {
     const { eventId } = useParams();
     const navigate = useNavigate();
@@ -49,10 +62,11 @@ export default function EventDetail() {
     }, [eventId]);
 
     const handleRegister = async () => {
-        if (registrationStatus === "pending" || registrationStatus === "approved") {
+        // Chặn đăng ký nếu đã có trạng thái (bao gồm cả rejected/completed nếu muốn chặt chẽ hơn)
+        if (registrationStatus && registrationStatus !== "") {
             Swal.fire({
                 icon: "warning",
-                title: "Bạn đã đăng ký hoặc đang chờ duyệt!",
+                title: "Thông báo",
                 text: "Bạn không thể đăng ký lại vào lúc này.",
                 confirmButtonText: "OK",
             });
@@ -151,7 +165,10 @@ export default function EventDetail() {
 
         galleryImages.forEach((img, index) => {
             const realUrl = `http://localhost:5000${img}`;
-            html = html.replaceAll(`{{image_${index}}}`, realUrl);
+            const placeholder = `[IMAGE_PLACEHOLDER_${index}]`;
+            const imgTag = `<img src="${realUrl}" style="max-width:100%; border-radius:6px;" />`;
+
+            html = html.replaceAll(placeholder, imgTag);
         });
 
         return html;
@@ -192,7 +209,7 @@ export default function EventDetail() {
                     <div className="flex items-center gap-3">
                         <Tag size={20} />
                         <span>
-                            <strong>Loại sự kiện:</strong> {event.category || "Khác"}
+                            <strong>Loại sự kiện:</strong> {categoryMapping[event.category] || event.category || "Khác"}
                         </span>
                     </div>
 
@@ -239,24 +256,40 @@ export default function EventDetail() {
                         __html: renderDescription(event.description, event.galleryImages)
                     }}
                 />
-
             </div>
 
-            {/* Nút đăng ký / hủy */}
+            {/* Xử lý hiển thị trạng thái và nút bấm */}
             <div className="flex items-center justify-center mt-4 px-6 pb-8 relative">
+
+                {/* --- CASE: PENDING --- */}
                 {registrationStatus === "pending" && (
                     <span className="text-white bg-gray-500 p-2 rounded-md font-semibold">
                         Đang chờ duyệt
                     </span>
                 )}
 
+                {/* --- CASE: APPROVED --- */}
                 {registrationStatus === "approved" && (
                     <span className="text-green-600 font-medium">
                         Đăng ký thành công
                     </span>
                 )}
 
-                {/* Nút đăng ký - Căn giữa */}
+                {/* --- CASE: COMPLETED (MỚI) --- */}
+                {registrationStatus === "completed" && (
+                    <span className="text-blue-500 font-medium">
+                        Bạn đã hoàn thành sự kiện này
+                    </span>
+                )}
+
+                {/* --- CASE: REJECTED (MỚI) --- */}
+                {registrationStatus === "rejected" && (
+                    <span className="text-red-500 font-medium">
+                        Yêu cầu đăng ký tham gia của bạn bị từ chối
+                    </span>
+                )}
+
+                {/* --- BUTTON: ĐĂNG KÝ (Chỉ hiện khi chưa đăng ký) --- */}
                 {registrationStatus === "" && (
                     <button
                         onClick={handleRegister}
@@ -266,8 +299,8 @@ export default function EventDetail() {
                     </button>
                 )}
 
-                {/* Nút hủy - Bên phải (absolute) */}
-                {registrationStatus !== "" && (
+                {/* --- BUTTON: HỦY ĐĂNG KÝ (Chỉ hiện khi Pending hoặc Approved) --- */}
+                {(registrationStatus === "pending" || registrationStatus === "approved") && (
                     <button
                         onClick={handleCancelRegistration}
                         className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 font-semibold absolute right-6"
