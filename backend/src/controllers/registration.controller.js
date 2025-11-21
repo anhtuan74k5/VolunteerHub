@@ -1,6 +1,7 @@
 import Registration from "../models/registration.js";
 import Event from "../models/event.js";
 import User from "../models/user.js";
+import { sendPushNotification } from "../utils/sendPush.js";
 // --- Chức năng cho Volunteer ---
 
 // [POST] /api/registrations/:eventId -> Volunteer đăng ký sự kiện
@@ -137,6 +138,19 @@ export const updateRegistrationStatus = async (req, res) => {
       message: "Cập nhật trạng thái thành công",
       registration: updatedReg,
     });
+
+    // Nếu status là 'approved' thì gửi push/notification tới volunteer
+    if (updatedReg && status === 'approved') {
+      try {
+        const volunteerId = updatedReg.volunteer;
+        const message = 'Yêu cầu đăng ký của bạn đã được chấp thuận.';
+        const url = `${process.env.CLIENT_URL || 'http://localhost:5173'}/my-registrations`;
+        // Fire-and-forget (log on error)
+        sendPushNotification(volunteerId, 'registration_approved', message, url).catch(err => console.error('sendPushNotification error (approved):', err));
+      } catch (err) {
+        console.error('Error triggering push on approve:', err);
+      }
+    }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
@@ -154,6 +168,18 @@ export const markAsCompleted = async (req, res) => {
       message: "Đánh dấu hoàn thành thành công",
       registration: updatedReg,
     });
+
+    // Nếu mark as completed, gửi thông báo tới volunteer
+    if (updatedReg) {
+      try {
+        const volunteerId = updatedReg.volunteer;
+        const message = 'Hoạt động bạn tham gia đã được đánh dấu là hoàn thành.';
+        const url = `${process.env.CLIENT_URL || 'http://localhost:5173'}/my-registrations`;
+        sendPushNotification(volunteerId, 'registration_approved', message, url).catch(err => console.error('sendPushNotification error (completed):', err));
+      } catch (err) {
+        console.error('Error triggering push on complete:', err);
+      }
+    }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
