@@ -77,20 +77,24 @@ export const saveSubscription = async (req, res) => {
       });
     }
 
-    // Kiểm tra xem subscription này đã tồn tại chưa
-    const existingSub = await Subscription.findOne({ 
-      user: req.user._id, 
-      endpoint 
-    });
+    // Tìm subscription theo endpoint (có thể đã tồn tại và gắn với user khác)
+    const existingByEndpoint = await Subscription.findOne({ endpoint });
 
-    if (existingSub) {
-      return res.json({ 
-        message: "Subscription đã tồn tại", 
-        subscription: existingSub 
-      });
+    if (existingByEndpoint) {
+      // Nếu subscription đã tồn tại nhưng thuộc về user khác -> gán lại cho user hiện tại
+      if (String(existingByEndpoint.user) !== String(req.user._id)) {
+        existingByEndpoint.user = req.user._id;
+        existingByEndpoint.keys = keys; // cập nhật keys nếu có thay đổi
+        await existingByEndpoint.save();
+        console.log(`🔁 Reassigned subscription endpoint to user: ${req.user.email}`);
+        return res.status(200).json({ message: 'Subscription transferred to current user', subscription: existingByEndpoint });
+      }
+
+      // Nếu subscription đã tồn tại và cùng user -> trả về thông báo đã tồn tại
+      return res.json({ message: 'Subscription đã tồn tại', subscription: existingByEndpoint });
     }
 
-    // Tạo mới subscription
+    // Nếu chưa tồn tại endpoint nào -> tạo mới
     const newSubscription = await Subscription.create({
       user: req.user._id,
       endpoint,
@@ -98,10 +102,7 @@ export const saveSubscription = async (req, res) => {
     });
 
     console.log(`✅ Đã lưu subscription cho user: ${req.user.email}`);
-    res.status(201).json({ 
-      message: "Đăng ký nhận thông báo thành công", 
-      subscription: newSubscription 
-    });
+    res.status(201).json({ message: 'Đăng ký nhận thông báo thành công', subscription: newSubscription });
 
   } catch (error) {
     console.error("❌ Lỗi khi lưu subscription:", error);
@@ -109,5 +110,37 @@ export const saveSubscription = async (req, res) => {
       message: "Lỗi server khi lưu subscription", 
       error: error.message 
     });
+  }
+};
+
+/**
+ * @desc Lấy tất cả subscription (push endpoints) của user hiện tại
+ * @route GET /api/notifications/subscriptions
+ * @access Private
+ */
+export const getMySubscriptions = async (req, res) => {
+  try {
+    const subs = await Subscription.find({ user: req.user._id }).select('-__v');
+    return res.json({ subscriptions: subs });
+  } catch (error) {
+    console.error('❌ Lỗi khi lấy subscriptions:', error);
+    return res.status(500).json({ message: 'Lỗi server khi lấy subscriptions', error: error.message });
+  }
+};
+
+/**
+ * @desc Trigger a test push for the logged-in user (protected)
+ * @route POST /api/notifications/test
+ * @access Private
+ */
+export const testPushForMe = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    // Fire send and return immediately so client doesn't wait long
+    sendPushNotification(userId, 'test', 'Test push: bạn đã nhận được thông báo thử nghiệm', '/').catch(err => console.error('testPush send error:', err));
+    return res.json({ message: 'Test push initiated' });
+  } catch (error) {
+    console.error('❌ Error initiating test push:', error);
+    return res.status(500).json({ message: 'Lỗi server khi gửi test push', error: error.message });
   }
 };

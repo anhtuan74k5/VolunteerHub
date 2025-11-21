@@ -36,11 +36,23 @@ export const subscribeUserToPush = async () => {
   }
 
   try {
-    // 2. Kiểm tra Service Worker đã sẵn sàng chưa
-    // (File service-worker.js phải được register thành công trước đó)
-    const swRegistration = await navigator.serviceWorker.ready;
+    // 2. Đảm bảo Service Worker đã sẵn sàng (với retry)
+    // Một số trường hợp SW chưa kịp register khi gọi subscribe (đăng nhập ngay khi trang tải),
+    // nên ta thử chờ tối đa vài giây.
+    let swRegistration = null;
+    const maxAttempts = 6;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        swRegistration = await navigator.serviceWorker.ready;
+        if (swRegistration) break;
+      } catch (e) {
+        console.warn(`⏳ [WebPush] Service Worker chưa ready (attempt ${attempt}/${maxAttempts})`);
+      }
+      // đợi 500ms trước khi thử lại
+      await new Promise((r) => setTimeout(r, 500));
+    }
     if (!swRegistration) {
-        throw new Error("Service Worker chưa sẵn sàng (ready).");
+      throw new Error("Service Worker chưa sẵn sàng sau nhiều lần thử.");
     }
 
     // 3. Xin quyền thông báo (Nếu chưa có)
@@ -69,23 +81,55 @@ export const subscribeUserToPush = async () => {
 
     // 5. Tạo Subscription (Lấy địa chỉ trình duyệt)
     // Trình duyệt sẽ dùng VAPID Key này để giao tiếp với Push Service (Google/Mozilla)
-    const subscription = await swRegistration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: convertedVapidKey,
+    // 5. Tạo Subscription (với retry)
+    let subscription = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        subscription = await swRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey,
+        });
+        break;
+      } catch (err) {
+        console.warn(`⚠️ [WebPush] subscribe() thất bại (attempt ${attempt}/3):`, err && err.message ? err.message : err);
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+    if (!subscription) throw new Error('Không thể tạo Push Subscription sau nhiều lần thử.');
+
+    // 6. Gửi Subscription lên Server (thử nhiều lần nếu cần)
+    console.log("📡 [WebPush] Đang gửi subscription lên server...");
+    const subPayload = (typeof subscription.toJSON === 'function') ? subscription.toJSON() : subscription;
+    console.log('📡 [WebPush] Subscription payload (truncated):', {
+      endpoint: subPayload.endpoint && subPayload.endpoint.slice(0, 120),
+      keys: subPayload.keys,
     });
 
-    // 6. Gửi Subscription lên Server
-    // Dùng instance 'http' để tự động đính kèm Token từ localStorage (nhờ BaseUrl.js)
-    console.log("📡 [WebPush] Đang gửi subscription lên server...");
-      // Some browsers return a PushSubscription object with methods; ensure we send plain JSON
-      const subPayload = (typeof subscription.toJSON === 'function')
-        ? subscription.toJSON()
-        : subscription;
-      console.log('📡 [WebPush] Subscription payload:', subPayload);
-      const resp = await http.post('/notifications/subscribe', subPayload);
-      console.log('📡 [WebPush] Server response:', resp?.data);
-    
-    console.log('✅ [WebPush] Đăng ký thành công! User sẽ nhận được thông báo.');
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const resp = await http.post('/notifications/subscribe', subPayload);
+        console.log('📡 [WebPush] Server response:', resp?.data);
+        console.log('✅ [WebPush] Đăng ký thành công! User sẽ nhận được thông báo.');
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        console.warn(`⚠️ [WebPush] Gửi subscription thất bại (attempt ${attempt}/3):`, err?.response?.status, err?.message || err);
+        // Nếu 401, không retry (cần login/token)
+        if (err?.response?.status === 401) break;
+        await new Promise((r) => setTimeout(r, 700));
+      }
+    }
+
+    if (lastErr) {
+      // In chi tiết để nhà phát triển dễ debug
+      console.error('❌ [WebPush] Không thể lưu subscription sau nhiều lần thử:', lastErr?.response?.data || lastErr?.message || lastErr);
+      // Thêm hướng dẫn nhanh cho dev
+      if (lastErr?.response?.status === 401) {
+        console.error('👉 [Gợi ý] Token có thể chưa được lưu vào localStorage trước khi gọi subscribe. Hãy đảm bảo đăng ký push được gọi sau khi login hoàn tất.');
+      }
+    }
 
   } catch (error) {
     console.error('❌ [WebPush] Lỗi khi đăng ký:', error);

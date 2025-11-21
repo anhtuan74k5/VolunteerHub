@@ -5,6 +5,7 @@ import { User, Lock } from "lucide-react";
 import Swal from "sweetalert2";
 import { DangNhap } from "../services/UserService";
 import { useEffect } from "react";
+import { subscribeUserToPush } from "../utils/notificationService";
 
 export default function Login() {
     const dispatch = useDispatch();
@@ -59,6 +60,41 @@ export default function Login() {
                 timer: 1500,
                 showConfirmButton: false,
             });
+
+            // Sau khi login thành công: Hỏi người dùng có muốn bật thông báo hay không
+            try {
+                const currentPermission = window.Notification?.permission;
+                if (currentPermission === 'granted') {
+                    // Nếu đã grant thì vẫn gọi subscribe để đảm bảo subscription được lưu
+                    subscribeUserToPush().catch(err => console.warn('⚠️ Không thể đăng ký push notification:', err));
+                } else if (currentPermission === 'denied') {
+                    // Nếu bị chặn, hướng dẫn người dùng
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Thông báo',
+                        html: 'Bạn đã chặn thông báo trên trình duyệt. Vui lòng bật lại trong cài đặt trang nếu muốn nhận thông báo.',
+                        timer: 4000,
+                        showConfirmButton: false,
+                    });
+                } else {
+                    // Nếu chưa chọn (default), hỏi người dùng bằng modal ứng dụng trước khi gọi requestPermission
+                    const { isConfirmed } = await Swal.fire({
+                        title: 'Nhận thông báo?',
+                        text: 'Bạn có muốn nhận thông báo khi có cập nhật quan trọng?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Bật thông báo',
+                        cancelButtonText: 'Không, cảm ơn',
+                    });
+
+                    if (isConfirmed) {
+                        // Gọi subscribe (hàm sẽ request permission nếu cần)
+                        subscribeUserToPush().catch(err => console.warn('⚠️ Không thể đăng ký push notification:', err));
+                    }
+                }
+            } catch (err) {
+                console.warn('⚠️ Lỗi khi xử lý đăng ký notification:', err);
+            }
 
         } catch (error) {
             Swal.fire({

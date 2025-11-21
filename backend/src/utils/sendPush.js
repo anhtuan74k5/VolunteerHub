@@ -49,6 +49,16 @@ export const sendPushNotification = async (userId, type, message, url = '/') => 
 
     // 2. Lấy tất cả "địa chỉ" (subscriptions) của người dùng đó
     const userSubscriptions = await Subscription.find({ user: userId });
+    if (!userSubscriptions || userSubscriptions.length === 0) {
+      console.log(`🔕 No subscriptions found for user ${userId}`);
+    } else {
+      console.log(`📬 Found ${userSubscriptions.length} subscription(s) for user ${userId}`);
+      // Log masked endpoints for debugging (don't print entire URLs)
+      userSubscriptions.forEach((s, idx) => {
+        const ep = (s.endpoint || '').slice(0, 80);
+        console.log(`  ${idx + 1}. endpoint: ${ep}${(s.endpoint && s.endpoint.length > 80) ? '...' : ''}`);
+      });
+    }
     
     // 3. Chuẩn bị payload (dùng 'message' làm 'body' cho pop-up)
     const payload = JSON.stringify({
@@ -62,15 +72,21 @@ export const sendPushNotification = async (userId, type, message, url = '/') => 
 
     // 4. Lặp qua từng "địa chỉ" và gửi push (logic này đã đúng)
     userSubscriptions.forEach(sub => {
-      webpush.sendNotification(sub.toObject(), payload)
-        .catch(err => {
-          // Nếu lỗi 410 (Gone), tức là subscription đã cũ, xóa nó đi
-          if (err.statusCode === 410) {
-            Subscription.findByIdAndDelete(sub._id).exec();
-          } else {
-            console.error('Lỗi khi gửi push:', err);
-          }
-        });
+      try {
+        console.log('➡️ Sending push to subscription id', sub._id.toString());
+        webpush.sendNotification(sub.toObject(), payload)
+          .catch(err => {
+            // Nếu lỗi 410 (Gone), tức là subscription đã cũ, xóa nó đi
+            if (err.statusCode === 410) {
+              console.log('🗑️ Subscription gone (410), deleting', sub._id.toString());
+              Subscription.findByIdAndDelete(sub._id).exec();
+            } else {
+              console.error('Lỗi khi gửi push:', err);
+            }
+          });
+      } catch (err) {
+        console.error('Lỗi khi gọi sendNotification:', err);
+      }
     });
 
   } catch (error) {

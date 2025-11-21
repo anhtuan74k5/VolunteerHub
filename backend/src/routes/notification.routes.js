@@ -5,6 +5,8 @@ import {
   getMyNotifications,
   markAsRead,
   saveSubscription,
+  getMySubscriptions,
+  testPushForMe,
   getVapidPublicKey,
 } from "../controllers/notification.controller.js";
 
@@ -30,6 +32,14 @@ router.put("/:id/read", verifyToken, markAsRead);
 // [POST] /api/notifications/subscribe
 // 📥 Lưu subscription từ trình duyệt
 router.post("/subscribe", verifyToken, saveSubscription);
+
+// [GET] /api/notifications/subscriptions
+// Trả về danh sách subscription (endpoints) của user đang đăng nhập
+router.get('/subscriptions', verifyToken, getMySubscriptions);
+
+// [POST] /api/notifications/test
+// Kích hoạt một test push cho user đang đăng nhập
+router.post('/test', verifyToken, testPushForMe);
 
 // [GET] /api/notifications/vapidPublicKey
 // Trả về public VAPID key (dành cho frontend khi không có env var tại build time)

@@ -151,6 +151,17 @@ export const updateRegistrationStatus = async (req, res) => {
         console.error('Error triggering push on approve:', err);
       }
     }
+    // Nếu status là 'rejected' thì gửi push/notification tới volunteer
+    if (updatedReg && status === 'rejected') {
+      try {
+        const volunteerId = updatedReg.volunteer;
+        const message = 'Rất tiếc, yêu cầu đăng ký của bạn đã bị từ chối.';
+        const url = `${process.env.CLIENT_URL || 'http://localhost:5173'}/my-registrations`;
+        sendPushNotification(volunteerId, 'registration_rejected', message, url).catch(err => console.error('sendPushNotification error (rejected):', err));
+      } catch (err) {
+        console.error('Error triggering push on reject:', err);
+      }
+    }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }

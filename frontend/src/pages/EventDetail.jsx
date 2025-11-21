@@ -256,6 +256,17 @@ export default function EventDetail() {
                     </span>
                 )}
 
+                {registrationStatus === "completed" && (
+                    <span className="text-green-600 font-semibold">
+                        Đã hoàn thành sự kiện
+                    </span>
+                )}
+                {registrationStatus === "rejected" && (
+                    <span className="text-red-600 font-medium">
+                        Bạn đã bị từ chối tham gia sự kiện
+                    </span>
+                )}
+
                 {/* Nút đăng ký - Căn giữa */}
                 {registrationStatus === "" && (
                     <button
@@ -267,7 +278,7 @@ export default function EventDetail() {
                 )}
 
                 {/* Nút hủy - Bên phải (absolute) */}
-                {registrationStatus !== "" && (
+                {registrationStatus !== "" && registrationStatus !== "completed" && registrationStatus !== "rejected" && (
                     <button
                         onClick={handleCancelRegistration}
                         className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 font-semibold absolute right-6"
