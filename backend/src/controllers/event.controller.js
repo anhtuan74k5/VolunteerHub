@@ -282,6 +282,7 @@ export const deleteEvent = async (req, res) => {
 };
 
 // [PUT] /api/events/:id/complete -> Hoàn thành & Cộng điểm
+// [PUT] /api/events/:id/complete -> Hoàn thành & Cộng điểm
 export const completeEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
@@ -308,11 +309,12 @@ export const completeEvent = async (req, res) => {
         .json({ message: "Sự kiện đã hoàn thành trước đó rồi." });
     }
 
-    // 👇 1. CỘNG 20 ĐIỂM CHO MANAGER (Người tạo)
+    // 👇 1. CỘNG ĐIỂM CHO MANAGER (Người tạo)
+    // Logic cũ: Manager +20đ cứng.
+    // Nếu bạn muốn Manager cũng nhận điểm theo loại sự kiện thì sửa '20' thành 'event.points'
     await User.findByIdAndUpdate(event.createdBy, { $inc: { points: 20 } });
 
-    // 👇 2. CỘNG 10 ĐIỂM CHO CÁC VOLUNTEER ĐÃ ĐƯỢC DUYỆT
-    // Lấy danh sách người tham gia đã được approved
+    // 👇 2. CỘNG ĐIỂM CHO CÁC VOLUNTEER ĐÃ ĐƯỢC DUYỆT
     const approvedRegistrations = await Registration.find({
       event: eventId,
       status: "approved",
@@ -321,9 +323,11 @@ export const completeEvent = async (req, res) => {
     const volunteerIds = approvedRegistrations.map((reg) => reg.volunteer);
 
     if (volunteerIds.length > 0) {
+      // ⚠️ SỬA LẠI Ở ĐÂY:
+      // Thay vì cộng 10, ta cộng 'event.points' (điểm quy định của sự kiện đó)
       await User.updateMany(
-        { _id: { $in: volunteerIds } }, // Tìm những user có ID trong danh sách
-        { $inc: { points: 10 } } // Cộng 10 điểm
+        { _id: { $in: volunteerIds } },
+        { $inc: { points: event.points } }
       );
     }
 
@@ -333,7 +337,7 @@ export const completeEvent = async (req, res) => {
     await event.save();
 
     res.status(200).json({
-      message: `Sự kiện hoàn thành. Manager +20 điểm. ${volunteerIds.length} tình nguyện viên +10 điểm.`,
+      message: `Sự kiện hoàn thành. Manager +20 điểm. ${volunteerIds.length} tình nguyện viên +${event.points} điểm.`,
       event: event,
     });
   } catch (err) {

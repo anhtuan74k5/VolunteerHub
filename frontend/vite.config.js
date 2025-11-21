@@ -4,4 +4,21 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 3000, // Đảm bảo frontend chạy ở port 3000 (để khớp với service worker registration nếu hardcode)
+    proxy: {
+      // Chuyển hướng mọi request bắt đầu bằng /api sang backend
+      '/api': {
+        target: 'http://localhost:5000', // Địa chỉ backend của bạn
+        changeOrigin: true,
+        secure: false,
+      },
+      // Nếu bạn có route upload ảnh, cũng cần proxy
+      '/uploads': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      }
+    },
+  },
 })
