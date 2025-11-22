@@ -27,6 +27,7 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                 birthday: user.birthday || "",
                 gender: user.gender || "Male",
                 status: user.status || "Hoạt động",
+                points: user.points || 0, // ✅ [MỚI] Thêm trường points vào state
             });
             setAvatarPreview(
                 user.avatar?.startsWith("http")
@@ -72,7 +73,7 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
             setEditMode(false);
             onUserUpdated(res.data.user);
             setAvatarFile(null);
-            window.location.reload();
+            // window.location.reload(); // Không cần reload trang nếu đã update state cha
         } catch (err) {
             Swal.fire({
                 title: "Lỗi!",
@@ -95,27 +96,10 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
         >
             <div className="content relative max-w-[1100px] mx-auto px-6 !py-[50px] bg-white rounded-3xl shadow-lg ">
                 {/* Ảnh trang trí */}
-                <img
-                    src={cats}
-                    alt="cat"
-                    className="absolute -top-[53px] left-[20px] w-[200px] drop-shadow-lg z-10"
-                />
-                <img
-                    src={bear}
-                    alt="bear"
-                    className="absolute bottom-[180px] -right-[90px] w-[135px] drop-shadow-lg z-10"
-                />
-                <img
-                    src={dog}
-                    alt="dog"
-                    className="absolute bottom-[10px] right-[150px] w-[350px] drop-shadow-lg z-10"
-                />
-                <img
-                    src={lizard}
-                    alt="lizard"
-                    className="absolute top-[56px] right-[230px] w-[80px] drop-shadow-lg z-10"
-                    style={{ transform: "scaleY(-1)" }}
-                />
+                <img src={cats} alt="cat" className="absolute -top-[53px] left-[20px] w-[200px] drop-shadow-lg z-10" />
+                <img src={bear} alt="bear" className="absolute bottom-[180px] -right-[90px] w-[135px] drop-shadow-lg z-10" />
+                <img src={dog} alt="dog" className="absolute bottom-[10px] right-[150px] w-[350px] drop-shadow-lg z-10" />
+                <img src={lizard} alt="lizard" className="absolute top-[56px] right-[230px] w-[80px] drop-shadow-lg z-10" style={{ transform: "scaleY(-1)" }} />
 
                 {/* Header */}
                 <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6 text-sm">
@@ -152,9 +136,9 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                     </div>
 
                     <div className="flex items-center gap-3 mt-4">
-                        {/* Điểm người dùng */}
+                        {/* ✅ [HIỂN THỊ] Điểm người dùng (Badge) */}
                         <div className="bg-orange-500 text-white px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px]">
-                            🌟 {user?.point || 0} ĐIỂM
+                            🌟 {editData.points || 0} ĐIỂM
                         </div>
 
                         {/* Trạng thái người dùng */}
@@ -322,7 +306,8 @@ const InfoRow = ({ label, name, editData, handleInputChange, editMode, type = "t
             return <span className="flex-1 text-gray-600">{moment(editData[name]).format("DD/MM/YYYY")}</span>;
         }
 
-        return <span className="flex-1 text-gray-600">{editData[name]}</span>;
+        // Xử lý hiển thị nếu là điểm số (hoặc các trường số khác)
+        return <span className="flex-1 text-gray-600 font-medium">{editData[name]}</span>;
     };
 
     return (

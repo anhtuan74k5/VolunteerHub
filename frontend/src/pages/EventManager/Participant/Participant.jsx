@@ -1,16 +1,58 @@
 import { useState, useEffect, useCallback } from "react";
-import { Table, Input, Button, Tag, message } from "antd";
+import { Table, Input, Button, Tag, message, Modal, Tooltip } from "antd";
 import { debounce } from "lodash";
 import {
     GetParticipants,
     UpdateParticipantStatus,
     MarkCompletedParticipants,
 } from "../../../services/EventManagerService";
-import { ReloadOutlined } from "@ant-design/icons";
+import {
+    ReloadOutlined,
+    SmileFilled,
+    FrownFilled,
+    UserDeleteOutlined,
+    MehFilled
+} from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 const { Search } = Input;
+
+// Cấu hình UI cho các mức đánh giá
+const PERFORMANCE_OPTIONS = [
+    {
+        key: "GOOD",
+        label: "Tốt",
+        description: "Hoàn thành tốt nhiệm vụ, thái độ tích cực.",
+        icon: <SmileFilled className="text-4xl mb-2 !text-white" />,
+        color: "bg-[#189438] !text-white",
+        tagColor: "gold"
+    },
+    {
+        key: "AVERAGE",
+        label: "Trung bình",
+        description: "Hoàn thành nhiệm vụ ở mức cơ bản.",
+        icon: <MehFilled className="text-4xl mb-2 !text-white" />,
+        color: "bg-[#E2A800] !text-white",
+        tagColor: "blue"
+    },
+    {
+        key: "BAD",
+        label: "Kém",
+        description: "Thái độ không tốt hoặc không hoàn thành nhiệm vụ.",
+        icon: <FrownFilled className="text-4xl mb-2 !text-white" />,
+        color: "bg-[#E41D13] !text-white",
+        tagColor: "orange"
+    },
+    {
+        key: "NO_SHOW",
+        label: "Vắng mặt",
+        description: "Đăng ký nhưng không tham gia.",
+        icon: <UserDeleteOutlined className="text-4xl mb-2 !text-white" />,
+        color: "bg-gray-500 !text-white",
+        tagColor: "default"
+    }
+];
 
 export default function Participants() {
     const { eventId } = useParams();
@@ -18,6 +60,11 @@ export default function Participants() {
     const [data, setData] = useState([]);
     const [originalData, setOriginalData] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    // State cho Modal đánh giá
+    const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+    const [selectedParticipant, setSelectedParticipant] = useState(null);
+    const [submittingRating, setSubmittingRating] = useState(false);
 
     const fetchParticipants = async () => {
         setLoading(true);
@@ -49,25 +96,22 @@ export default function Participants() {
     const searchKeyword = useCallback(
         debounce((value) => {
             const keyword = removeVietnameseTones(value.trim().toLowerCase());
-
             if (!keyword) {
                 setData(originalData);
                 return;
             }
-
             const filtered = originalData.filter((item) => {
                 const name = removeVietnameseTones(item.volunteer?.name || "");
                 return name.includes(keyword);
             });
-
             setData(filtered);
         }, 300),
         [originalData]
     );
 
+    // --- XỬ LÝ TRẠNG THÁI PENDING ---
     const handleUpdateStatus = async (registrationId, status, name) => {
         const actionText = status === "approved" ? "duyệt" : "từ chối";
-
         const result = await Swal.fire({
             title: `Bạn có chắc muốn ${actionText}?`,
             html: `Tình nguyện viên: <strong>${name}</strong>`,
@@ -75,7 +119,7 @@ export default function Participants() {
             showCancelButton: true,
             confirmButtonText: "Xác nhận",
             cancelButtonText: "Hủy",
-            confirmButtonColor: "#DDB958",
+            confirmButtonColor: status === "approved" ? "#22C55E" : "#EA4343",
             cancelButtonColor: "#d33",
         });
 
@@ -83,7 +127,6 @@ export default function Participants() {
 
         try {
             const res = await UpdateParticipantStatus(registrationId, status);
-
             if (res.status === 200) {
                 Swal.fire("Thành công", "Cập nhật trạng thái thành công", "success");
                 fetchParticipants();
@@ -95,133 +138,162 @@ export default function Participants() {
         }
     };
 
-    const handleMarkComplete = async (registrationId, name) => {
-        const result = await Swal.fire({
-            title: "Xác nhận hoàn thành?",
-            html: `Tình nguyện viên: <strong>${name}</strong>`,
-            icon: "warning",
+    // --- XỬ LÝ ĐÁNH GIÁ (MỞ MODAL) ---
+    const openRatingModal = (record) => {
+        setSelectedParticipant(record);
+        setIsRatingModalOpen(true);
+    };
+
+    // --- GỌI API MARK COMPLETED (CÓ CONFIRM SWAL) ---
+    const handleSubmitRating = async (performance) => {
+        if (!selectedParticipant) return;
+
+        // 1. Lấy thông tin option đã chọn để hiển thị tên đẹp hơn
+        const selectedOption = PERFORMANCE_OPTIONS.find(o => o.key === performance);
+
+        // 2. Hiện Swal xác nhận
+        const confirmResult = await Swal.fire({
+            title: 'Xác nhận đánh giá',
+            html: `
+                Bạn có chắc chắn muốn đánh giá: <br/>
+                <strong>${selectedParticipant.volunteer?.name}</strong> <br/>
+                <strong style="color: #DDB958; font-size: 1.2em;">${selectedOption?.label}</strong>?
+            `,
+            icon: 'question',
             showCancelButton: true,
-            confirmButtonText: "Xác nhận",
-            cancelButtonText: "Hủy",
-            confirmButtonColor: "#DDB958",
-            cancelButtonColor: "#d33",
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Xem lại',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33'
         });
 
-        if (!result.isConfirmed) return;
+        // Nếu người dùng bấm Hủy -> Dừng lại
+        if (!confirmResult.isConfirmed) return;
+
+        // 3. Tiến hành gọi API
+        setSubmittingRating(true);
 
         try {
-            const res = await MarkCompletedParticipants(registrationId);
+            const res = await MarkCompletedParticipants(selectedParticipant._id, { performance });
+
             if (res.status === 200) {
-                Swal.fire("Thành công", "Đã đánh dấu hoàn thành", "success");
+                setIsRatingModalOpen(false);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đánh giá thành công!',
+                    text: `Đã ghi nhận kết quả: ${selectedOption?.label}`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
                 fetchParticipants();
             }
         } catch (error) {
-            Swal.fire("Lỗi", "Không thể đánh dấu hoàn thành", "error");
+            console.error(error);
+            message.error("Có lỗi xảy ra khi đánh giá.");
+        } finally {
+            setSubmittingRating(false);
         }
     };
 
     const columns = [
         {
-            title: "Tên tình nguyện viên",
+            title: "Tình nguyện viên",
             dataIndex: ["volunteer", "name"],
-            sorter: (a, b) =>
-                (a.volunteer?.name || "").localeCompare(b.volunteer?.name || ""),
+            render: (text, record) => (
+                <div>
+                    <div className="font-semibold text-gray-800">{text}</div>
+                    {/* <div className="text-xs text-gray-500">{record.volunteer?.email || "—"}</div> */}
+                </div>
+            ),
+            sorter: (a, b) => (a.volunteer?.name || "").localeCompare(b.volunteer?.name || ""),
         },
         {
             title: "Email",
             dataIndex: ["volunteer", "email"],
-            render: (email) => email || "—",
+            render: (text) => (
+                <div className="font-semibold text-gray-500 text-sm">{text || "—"}</div>
+            ),
+            sorter: (a, b) => (a.volunteer?.email || "").localeCompare(b.volunteer?.email || ""),
         },
+
         {
             title: "Trạng thái",
             dataIndex: "status",
+            width: 150,
             render: (status) => {
-                const color = {
-                    pending: "!text-[#DDB958]",
-                    completed: "!text-blue-500",
-                    approved: "!text-green-500",
-                }[status] || "!text-red-500";
+                let color = "default";
+                let text = status.toUpperCase();
 
-                return (
-                    <Tag className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}>
-                        {status.toUpperCase()}
-                    </Tag>
-                );
+                if (status === 'pending') { color = "gold"; text = "CHỜ DUYỆT"; }
+                if (status === 'approved') { color = "green"; text = "ĐÃ DUYỆT"; }
+                if (status === 'rejected') { color = "red"; text = "TỪ CHỐI"; }
+                if (status === 'completed') { color = "blue"; text = "HOÀN THÀNH"; }
+
+                return <Tag color={color} className="!font-semibold !bg-transparent !border-none !text-[14px] !pl-0 !ml-0">{text}</Tag>;
             },
+        },
+        {
+            title: "Đánh giá",
+            dataIndex: "performance",
+            align: "center",
+            width: 150,
+            render: (perf) => {
+                if (!perf) return <span className="text-gray-400">—</span>;
+                const option = PERFORMANCE_OPTIONS.find(o => o.key === perf);
+                return option ? (
+                    <Tag color={option.tagColor} icon={option.icon} className="px-2 py-1 rounded-md flex items-center justify-center gap-1 w-fit mx-auto">
+                        {/* Chỉ render icon nhỏ trong bảng cho gọn */}
+                        {option.label}
+                    </Tag>
+                ) : perf;
+            }
         },
         {
             title: "Thao tác",
             align: "center",
+            width: 200,
             render: (_, record) => (
-                <div className="flex flex-col gap-2 justify-center items-center">
+                <div className="flex flex-col justify-center items-center gap-2">
+                    {/* CASE 1: Đang chờ duyệt -> Hiện nút Duyệt / Từ chối */}
                     {record.status === "pending" && (
                         <>
-                            {/* Duyệt */}
-                            <Button
-                                className="hover:bg-green-600 hover:scale-105 transition-all"
-                                onClick={() =>
-                                    handleUpdateStatus(
-                                        record._id,
-                                        "approved",
-                                        record.volunteer?.name
-                                    )
-                                }
-                                style={{
-                                    width: 80,
-                                    height: 30,
-                                    background: "#22C55E",
-                                    border: "none",
-                                    fontWeight: "500",
-                                    color: "white"
-                                }}
-                            >
-                                <span style={{ fontSize: 14 }}>Duyệt</span>
-                            </Button>
+                            <Tooltip title="Duyệt tham gia">
+                                <Button
+                                    type="primary"
+                                    className="!bg-green-500 !hover:bg-green-600 !border-none !font-semibold w-18"
+                                    size="small"
+                                    onClick={() => handleUpdateStatus(record._id, "approved", record.volunteer?.name)}
+                                >
+                                    Duyệt
+                                </Button>
+                            </Tooltip>
+                            <Tooltip title="Từ chối tham gia">
+                                <Button
 
-                            {/* Từ chối */}
-                            <Button
-                                className="hover:bg-red-600 hover:scale-105 transition-all"
-                                onClick={() =>
-                                    handleUpdateStatus(
-                                        record._id,
-                                        "rejected",
-                                        record.volunteer?.name
-                                    )
-                                }
-                                style={{
-                                    width: 80,
-                                    height: 30,
-                                    background: "#EA4343",
-                                    color: "white",
-                                    border: "none",
-                                    fontWeight: "500",
-                                }}
-                            >
-                                <span style={{ fontSize: 14 }}>Từ chối</span>
-                            </Button>
+                                    size="small"
+                                    className="!bg-red-500 !hover:bg-red-600 !border-none !text-white !font-semibold w-18"
+                                    onClick={() => handleUpdateStatus(record._id, "rejected", record.volunteer?.name)}
+                                >
+                                    Từ chối
+                                </Button>
+                            </Tooltip>
                         </>
                     )}
 
+                    {/* CASE 2: Đã duyệt -> Hiện nút Hoàn thành (Mở Modal đánh giá) */}
                     {record.status === "approved" && (
                         <Button
-                            className="hover:bg-blue-700 hover:scale-105 transition-all"
-                            onClick={() =>
-                                handleMarkComplete(
-                                    record._id,
-                                    record.volunteer?.name
-                                )
-                            }
-                            style={{
-                                width: 100,
-                                height: 30,
-                                backgroundColor: "#3b82f6",
-                                color: "white",
-                                border: "none",
-                                fontWeight: "500",
-                            }}
+                            type="primary"
+                            className="!bg-blue-500 !hover:bg-blue-700 !border-none !shadow-md !shadow-blue-200 !font-semibold"
+                            onClick={() => openRatingModal(record)}
                         >
-                            <span style={{ fontSize: 14 }}>Hoàn thành</span>
+                            Đánh giá
                         </Button>
+                    )}
+
+                    {/* CASE 3: Đã hoàn thành -> Có thể hiện nút sửa đánh giá nếu cần (Option) */}
+                    {record.status === "completed" && (
+                        <span className="text-green-600 font-medium text-xs">Đã kết thúc</span>
                     )}
                 </div>
             ),
@@ -229,19 +301,20 @@ export default function Participants() {
     ];
 
     return (
-        <div>
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl uppercase font-bold">Tình Nguyện Viên</h2>
+        <div className="p-4 bg-white rounded-lg shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl uppercase font-bold text-gray-800">Quản lý Tình Nguyện Viên</h2>
                 <Button icon={<ReloadOutlined />} onClick={fetchParticipants}>
                     Tải lại
                 </Button>
             </div>
 
             <Search
-                placeholder="Tìm kiếm theo tên tình nguyện viên"
+                placeholder="Tìm kiếm theo tên tình nguyện viên..."
+                allowClear
                 size="large"
                 onChange={(e) => searchKeyword(e.target.value)}
-                className="mb-4"
+                className="mb-6 w-full"
             />
 
             <Table
@@ -249,9 +322,57 @@ export default function Participants() {
                 dataSource={data}
                 rowKey="_id"
                 loading={loading}
-                pagination={{ pageSize: 10 }}
-                className="shadow shadow-md rounded-md"
+                pagination={{ pageSize: 8 }}
+                className="shadow-sm border border-gray-100 rounded-md"
             />
+
+            {/* --- MODAL ĐÁNH GIÁ SÁNG TẠO --- */}
+            <Modal
+                title={null}
+                footer={null}
+                open={isRatingModalOpen}
+                onCancel={() => setIsRatingModalOpen(false)}
+                width={700}
+                centered
+                className="rating-modal"
+            >
+                <div className="text-center mb-8 mt-4">
+                    <h3 className="text-2xl font-bold text-gray-800">Đánh giá Tình Nguyện Viên</h3>
+                    <p className="text-gray-500 mt-2">
+                        Hãy chọn mức độ hoàn thành nhiệm vụ của: <br />
+                        <span className="text-[#001529] font-bold text-3xl">{selectedParticipant?.volunteer?.name}</span>
+                        <p className="text-gray-500 font-md text-md">({selectedParticipant?.volunteer?.email})</p>
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 px-4 pb-6">
+                    {PERFORMANCE_OPTIONS.map((option) => (
+                        <div
+                            key={option.key}
+                            onClick={() => !submittingRating && handleSubmitRating(option.key)}
+                            className={`
+                                group relative cursor-pointer rounded-xl border-2 p-6 transition-all duration-200
+                                flex flex-col items-center text-center
+                                ${option.color}
+                                ${submittingRating ? 'opacity-50 pointer-events-none' : 'hover:-translate-y-1 hover:shadow-lg'}
+                            `}
+                        >
+                            <div className="transition-transform group-hover:scale-110 duration-300">
+                                {option.icon}
+                            </div>
+                            <div className="font-bold text-lg mb-1">{option.label}</div>
+                            <div className="text-sm opacity-80">{option.description}</div>
+
+                            {/* Loading spinner overlay nếu đang submit */}
+                            {submittingRating && (
+                                <div className="absolute inset-0 bg-white/50 rounded-xl flex items-center justify-center">
+                                    <ReloadOutlined spin className="text-2xl text-gray-600" />
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </Modal>
         </div>
     );
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Calendar, Users, MapPin, Heart, Share2, Search } from "lucide-react";
-import { GetEvents } from "../services/EventService";
+import { GetEvents, GetEventActionStats } from "../services/EventService";
 import { GetMyEvent, CheckEventStatus, EventActions } from "../services/UserService";
 import Swal from "sweetalert2";
 
@@ -22,7 +22,7 @@ export default function EventList() {
   const [loading, setLoading] = useState(true);
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  // State lưu trạng thái Like
+  // State lưu trạng thái Like của user (Key: eventId, Value: boolean)
   const [likedEvents, setLikedEvents] = useState({});
 
   // State lưu dữ liệu tham gia của user (Key: eventId, Value: status string)
@@ -42,60 +42,76 @@ export default function EventList() {
   });
 
   const [tab, setTab] = useState("all");
+  // eslint-disable-next-line no-unused-vars
   const [myEvents, setMyEvents] = useState([]);
 
-  // ✅ Fetch events (Tất cả sự kiện công khai)
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const res = await GetEvents();
-        if (res.status === 200) {
-          const eventsWithTranslatedCategories = res.data.map((event) => ({
-            ...event,
-            category: categoryMapping[event.category] || event.category,
-          }));
+  // ----------------------------------------------------------------
+  // 1. CÁC HÀM HỖ TRỢ LẤY DỮ LIỆU (STATS, STATUS)
+  // ----------------------------------------------------------------
 
-          setEvents(eventsWithTranslatedCategories);
-          setFilteredEvents(eventsWithTranslatedCategories);
+  // ✅ Helper: Lấy số liệu thống kê (Like/Share/View) cho TOÀN BỘ danh sách
+  const fetchAllRealtimeStats = async (eventList) => {
+    if (!eventList || eventList.length === 0) return;
 
-          checkLikeStatuses(eventsWithTranslatedCategories);
+    // Gọi song song tất cả request để tối ưu tốc độ
+    const updatedStats = await Promise.all(
+      eventList.map(async (event) => {
+        try {
+          const res = await GetEventActionStats(event._id);
+          if (res.status === 200) {
+            return {
+              id: event._id,
+              stats: res.data // { likesCount, sharesCount, viewsCount }
+            };
+          }
+        } catch (error) {
+          console.error(`Lỗi lấy stats event ${event._id}`, error);
         }
-      } catch (err) {
-        console.error("Lỗi lấy sự kiện:", err);
-      }
-      setLoading(false);
-    }
-    fetchEvents();
-  }, []);
+        return null;
+      })
+    );
 
-  //  Fetch my events và tạo Map trạng thái
-  useEffect(() => {
-    async function fetchMyEvents() {
-      try {
-        const res = await GetMyEvent();
-        if (res.status === 200) {
-          const myEventList = res.data || [];
-          setMyEvents(myEventList);
-
-          // Map: { eventId: status }
-          const statusMap = {};
-          myEventList.forEach(item => {
-            if (item.event && item.event._id) {
-              statusMap[item.event._id] = item.status;
-            }
-          });
-          setUserParticipationMap(statusMap);
+    // Cập nhật state events một lần duy nhất
+    setEvents((prevEvents) =>
+      prevEvents.map((ev) => {
+        const newStat = updatedStats.find(item => item && item.id === ev._id);
+        if (newStat) {
+          return {
+            ...ev,
+            likes: newStat.stats.likesCount,
+            shares: newStat.stats.sharesCount,
+            views: newStat.stats.viewsCount
+          };
         }
-      } catch (error) {
-        console.error("Lỗi lấy sự kiện đã tham gia:", error);
-      }
-    }
-    fetchMyEvents();
-  }, []);
+        return ev;
+      })
+    );
+  };
 
-  //  Helper: Check Like Status
+  // ✅ Helper: Cập nhật số liệu cho 1 sự kiện cụ thể (Dùng sau khi tương tác)
+  const updateSingleEventStats = async (eventId) => {
+    try {
+      const res = await GetEventActionStats(eventId);
+      if (res.status === 200) {
+        const { likesCount, sharesCount, viewsCount } = res.data;
+        setEvents((prevEvents) =>
+          prevEvents.map((ev) =>
+            ev._id === eventId
+              ? { ...ev, likes: likesCount, shares: sharesCount, views: viewsCount }
+              : ev
+          )
+        );
+      }
+    } catch (error) {
+      console.error(`Lỗi cập nhật stats đơn lẻ ${eventId}:`, error);
+    }
+  };
+
+  // ✅ Helper: Check User đã Like bài nào chưa
   const checkLikeStatuses = async (eventList) => {
     if (!eventList || eventList.length === 0) return;
+
+    // Chỉ check những event chưa có trong state để tránh gọi lại
     const eventsToCheck = eventList.filter(e => likedEvents[e._id] === undefined);
     if (eventsToCheck.length === 0) return;
 
@@ -115,6 +131,73 @@ export default function EventList() {
     setLikedEvents((prev) => ({ ...prev, ...statusMap }));
   };
 
+  // ----------------------------------------------------------------
+  // 2. USE EFFECTS (FETCH DATA ban đầu)
+  // ----------------------------------------------------------------
+
+  // ✅ Fetch events (Tất cả sự kiện công khai)
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const res = await GetEvents();
+        if (res.status === 200) {
+          const eventsWithTranslatedCategories = res.data.map((event) => ({
+            ...event,
+            category: categoryMapping[event.category] || event.category,
+          }));
+
+          setEvents(eventsWithTranslatedCategories);
+          setFilteredEvents(eventsWithTranslatedCategories);
+
+          // 1. Check trạng thái Like của user
+          checkLikeStatuses(eventsWithTranslatedCategories);
+
+          // 2. Lấy số liệu thống kê mới nhất ngay lập tức
+          fetchAllRealtimeStats(eventsWithTranslatedCategories);
+        }
+      } catch (err) {
+        console.error("Lỗi lấy sự kiện:", err);
+      }
+      setLoading(false);
+    }
+    fetchEvents();
+  }, []);
+
+  // ✅ Fetch my events và tạo Map trạng thái tham gia
+  useEffect(() => {
+    async function fetchMyEvents() {
+      try {
+        const res = await GetMyEvent();
+        if (res.status === 200) {
+          const myEventList = res.data || [];
+          setMyEvents(myEventList);
+
+          // Map: { eventId: status } -> Giúp tra cứu nhanh O(1)
+          const statusMap = {};
+          myEventList.forEach(item => {
+            if (item.event && item.event._id) {
+              statusMap[item.event._id] = item.status;
+            }
+          });
+          setUserParticipationMap(statusMap);
+        }
+      } catch (error) {
+        console.error("Lỗi lấy sự kiện đã tham gia:", error);
+      }
+    }
+    fetchMyEvents();
+  }, []);
+
+  // ✅ Polling: Tự động cập nhật số liệu mỗi 30 giây
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (filteredEvents.length > 0) {
+        fetchAllRealtimeStats(filteredEvents);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [filteredEvents]);
+
   // ✅ Debounce search query
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -123,30 +206,28 @@ export default function EventList() {
     return () => clearTimeout(handler);
   }, [filters.query]);
 
+  // ----------------------------------------------------------------
+  // 3. FILTER LOGIC (CORE)
+  // ----------------------------------------------------------------
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  // CORE LOGIC: Lọc dữ liệu
   useEffect(() => {
     let filtered = [...events];
 
     // 1. Lọc theo TAB
     if (tab === "joined") {
-      // ĐÃ ĐĂNG KÝ: Lấy tất cả sự kiện có trong userParticipationMap
-      // (Bao gồm: pending, approved, rejected, completed)
+      // ĐÃ ĐĂNG KÝ: Có trạng thái bất kỳ trong map
       filtered = filtered.filter((event) => userParticipationMap[event._id]);
     } else if (tab === "notJoined") {
-      // CHƯA ĐĂNG KÝ: Sự kiện KHÔNG có trong userParticipationMap
+      // CHƯA ĐĂNG KÝ: Không có trong map
       filtered = filtered.filter((event) => !userParticipationMap[event._id]);
     } else if (tab === "liked") {
       filtered = filtered.filter((event) => likedEvents[event._id]);
     }
-    // tab "all" hiển thị tất cả
 
     // 2. Lọc theo Category
     if (appliedFilters.category) {
@@ -188,25 +269,18 @@ export default function EventList() {
     });
   };
 
-  // Tính Count
-  const tabCounts = useMemo(() => {
-    return {
-      all: events.length,
-      // Đã đăng ký: Bất kỳ trạng thái nào tồn tại trong map
-      joined: events.filter(e => userParticipationMap[e._id]).length,
-      // Chưa đăng ký: Không tồn tại trong map
-      notJoined: events.filter(e => !userParticipationMap[e._id]).length,
-      liked: Object.values(likedEvents).filter(Boolean).length,
-      forYou: 0,
-    };
-  }, [events, userParticipationMap, likedEvents]);
+  // ----------------------------------------------------------------
+  // 4. USER INTERACTIONS (LIKE, SHARE, VIEW)
+  // ----------------------------------------------------------------
 
-  // ... Interaction Handlers ...
   const handleInteraction = async (e, eventId, type) => {
     e.stopPropagation();
     try {
+      // --- LIKE ---
       if (type === "LIKE") {
         const isCurrentlyLiked = likedEvents[eventId];
+
+        // Optimistic Update
         setLikedEvents((prev) => ({ ...prev, [eventId]: !isCurrentlyLiked }));
         setEvents((prevEvents) =>
           prevEvents.map((ev) =>
@@ -215,16 +289,23 @@ export default function EventList() {
               : ev
           )
         );
+
         await EventActions(eventId, { type: "LIKE" });
+        await updateSingleEventStats(eventId); // Đồng bộ lại số chuẩn
       }
+
+      // --- SHARE ---
       if (type === "SHARE") {
+        // Optimistic Update
         setEvents((prevEvents) =>
           prevEvents.map((ev) =>
             ev._id === eventId ? { ...ev, shares: ev.shares + 1 } : ev
           )
         );
+
         const res = await EventActions(eventId, { type: "SHARE" });
         const shareLink = res.data?.link || `${window.location.origin}/su-kien/${eventId}`;
+
         navigator.clipboard.writeText(shareLink);
         Swal.fire({
           icon: 'success',
@@ -235,9 +316,12 @@ export default function EventList() {
           timer: 2000,
           timerProgressBar: true
         });
+
+        await updateSingleEventStats(eventId); // Đồng bộ lại số chuẩn
       }
     } catch (error) {
       console.error(`Lỗi thực hiện hành động ${type}:`, error);
+      // Rollback UI nếu lỗi Like
       if (type === "LIKE") {
         const isCurrentlyLiked = likedEvents[eventId];
         setLikedEvents((prev) => ({ ...prev, [eventId]: !isCurrentlyLiked }));
@@ -261,6 +345,20 @@ export default function EventList() {
     window.location.href = `/su-kien/${eventId}`;
   };
 
+  // ----------------------------------------------------------------
+  // 5. UTILS & RENDER
+  // ----------------------------------------------------------------
+
+  const tabCounts = useMemo(() => {
+    return {
+      all: events.length,
+      joined: events.filter(e => userParticipationMap[e._id]).length,
+      notJoined: events.filter(e => !userParticipationMap[e._id]).length,
+      liked: Object.values(likedEvents).filter(Boolean).length,
+      forYou: 0,
+    };
+  }, [events, userParticipationMap, likedEvents]);
+
   const removeVietnameseTones = (str) =>
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
 
@@ -283,7 +381,6 @@ export default function EventList() {
     <div>
       {/* FILTER UI */}
       <div className="flex flex-wrap items-left gap-4 mb-8">
-        {/* 1. Loại sự kiện */}
         <select name="category" className="border border-gray-300 rounded-md px-3 py-2" value={filters.category} onChange={handleFilterChange}>
           <option value="">Loại sự kiện</option>
           <option value="Cộng đồng">Cộng đồng</option>
@@ -297,7 +394,6 @@ export default function EventList() {
           <option value="Doanh nghiệp">Doanh nghiệp</option>
         </select>
 
-        {/* 2. Trạng thái (Lọc các trạng thái con trong tab "Đã đăng ký" hoặc "Tất cả") */}
         <select name="status" className="border border-gray-300 rounded-md px-3 py-2 min-w-[150px]" value={filters.status} onChange={handleFilterChange}>
           <option value="">Tất cả trạng thái</option>
           <option value="pending">Đang chờ duyệt</option>
@@ -306,7 +402,6 @@ export default function EventList() {
           <option value="rejected">Bị từ chối</option>
         </select>
 
-        {/* 3. Thời gian */}
         <select name="dateOrder" className="border border-gray-300 rounded-md px-3 py-2" value={filters.dateOrder} onChange={handleFilterChange}>
           <option value="">Thời gian</option>
           <option value="asc">Gần đến xa</option>
