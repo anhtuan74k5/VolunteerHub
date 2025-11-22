@@ -1,7 +1,9 @@
+// src/controllers/registration.controller.js
 import Registration from "../models/registration.js";
 import Event from "../models/event.js";
 import User from "../models/user.js";
-import { sendPushNotification } from "../utils/sendPush.js";
+import { sendPushNotification } from "../utils/sendPush.js"; // Đảm bảo đường dẫn import đúng
+
 // --- Chức năng cho Volunteer ---
 
 // [POST] /api/registrations/:eventId -> Volunteer đăng ký sự kiện
@@ -18,21 +20,19 @@ export const registerForEvent = async (req, res) => {
         .json({ message: "Sự kiện không tồn tại hoặc chưa được duyệt." });
     }
 
-    // 2. 👇 KIỂM TRA SỐ LƯỢNG
-    // Đếm số lượng người đã đăng ký (cả 'pending' và 'approved')
+    // 2. KIỂM TRA SỐ LƯỢNG
     const currentParticipants = await Registration.countDocuments({
       event: eventId,
-      status: { $in: ["approved"] }, // Đếm cả 2 trạng thái
+      status: { $in: ["approved"] },
     });
 
     if (currentParticipants >= event.maxParticipants) {
       return res.status(409).json({
-        // 409 Conflict
         message: "Rất tiếc, sự kiện này đã đủ số lượng người tham gia.",
       });
     }
 
-    // 3. Tạo đăng ký mới (Giữ nguyên)
+    // 3. Tạo đăng ký mới
     const newRegistration = new Registration({
       event: eventId,
       volunteer: volunteerId,
@@ -77,7 +77,6 @@ export const cancelRegistration = async (req, res) => {
       const eventDate = new Date(event.date);
 
       // Tính khoảng cách thời gian ra ngày
-      // Công thức: (Ngày sự kiện - Ngày hiện tại) / (ms * giây * phút * giờ)
       const diffTime = eventDate - now;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -114,12 +113,64 @@ export const getMyHistory = async (req, res) => {
 // --- Chức năng cho Event Manager ---
 
 // [GET] /api/registrations/:eventId/participants -> Manager xem danh sách đăng ký
+// CẬP NHẬT: Trả về thêm thông tin điểm thưởng và đánh giá nếu đã hoàn thành
 export const getEventRegistrations = async (req, res) => {
   try {
-    const registrations = await Registration.find({
-      event: req.params.eventId,
-    }).populate("volunteer", "name email");
-    res.status(200).json(registrations);
+    const eventId = req.params.eventId;
+
+    // 1. Lấy thông tin sự kiện để biết điểm chuẩn (event.points)
+    const event = await Event.findById(eventId).select("points status");
+    if (!event) {
+      return res.status(404).json({ message: "Sự kiện không tồn tại" });
+    }
+
+    // 2. Lấy danh sách đăng ký
+    const registrations = await Registration.find({ event: eventId })
+      .populate("volunteer", "name email avatar phone")
+      .lean(); // Dùng lean() để dễ dàng gán thêm trường mới
+
+    // 3. Tính toán thông tin đánh giá cho từng người để hiển thị
+    const results = registrations.map((reg) => {
+      let evaluation = "Chưa đánh giá";
+      let pointsAwarded = 0;
+
+      // Chỉ tính toán hiển thị nếu đơn đăng ký đã hoàn thành và có performance
+      if (reg.status === "completed") {
+        const eventPoints = event.points || 0;
+
+        if (reg.performance) {
+          evaluation = reg.performance;
+          switch (reg.performance) {
+            case "GOOD":
+              pointsAwarded = eventPoints;
+              break;
+            case "AVERAGE":
+              pointsAwarded = Math.floor(eventPoints / 2);
+              break;
+            case "BAD":
+              pointsAwarded = Math.floor(eventPoints / 5);
+              break;
+            case "NO_SHOW":
+              pointsAwarded = -10;
+              break;
+            default:
+              pointsAwarded = eventPoints;
+          }
+        } else {
+          // Trường hợp completed cũ chưa có performance (tương thích ngược)
+          evaluation = "Đã hoàn thành";
+          pointsAwarded = eventPoints;
+        }
+      }
+
+      return {
+        ...reg,
+        evaluation, // Hiển thị: GOOD, AVERAGE...
+        pointsAwarded, // Hiển thị số điểm: 35, 17, -10...
+      };
+    });
+
+    res.status(200).json(results);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
@@ -139,61 +190,43 @@ export const updateRegistrationStatus = async (req, res) => {
       registration: updatedReg,
     });
 
-    // Nếu status là 'approved' thì gửi push/notification tới volunteer
-    if (updatedReg && status === "approved") {
-      try {
-        const volunteerId = updatedReg.volunteer;
-        const message = "Yêu cầu đăng ký của bạn đã được chấp thuận.";
-        const url = `${
-          process.env.CLIENT_URL || "http://localhost:5173"
-        }/my-registrations`;
-        // Fire-and-forget (log on error)
+    // Thông báo
+    if (updatedReg) {
+      const volunteerId = updatedReg.volunteer;
+      const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+      const url = `${clientUrl}/my-registrations`;
+
+      if (status === "approved") {
         sendPushNotification(
           volunteerId,
           "registration_approved",
-          message,
+          "Yêu cầu đăng ký của bạn đã được chấp thuận.",
           url
-        ).catch((err) =>
-          console.error("sendPushNotification error (approved):", err)
-        );
-      } catch (err) {
-        console.error("Error triggering push on approve:", err);
-      }
-    }
-    // Nếu status là 'rejected' thì gửi push/notification tới volunteer
-    if (updatedReg && status === "rejected") {
-      try {
-        const volunteerId = updatedReg.volunteer;
-        const message = "Rất tiếc, yêu cầu đăng ký của bạn đã bị từ chối.";
-        const url = `${
-          process.env.CLIENT_URL || "http://localhost:5173"
-        }/my-registrations`;
+        ).catch((err) => console.error("Push error (approved):", err));
+      } else if (status === "rejected") {
         sendPushNotification(
           volunteerId,
           "registration_rejected",
-          message,
+          "Rất tiếc, yêu cầu đăng ký của bạn đã bị từ chối.",
           url
-        ).catch((err) =>
-          console.error("sendPushNotification error (rejected):", err)
-        );
-      } catch (err) {
-        console.error("Error triggering push on reject:", err);
+        ).catch((err) => console.error("Push error (rejected):", err));
       }
     }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
+
 // [PUT] /api/registrations/:registrationId/complete
 // Body: { "performance": "GOOD" | "AVERAGE" | "BAD" | "NO_SHOW" }
+// CẬP NHẬT: Lưu performance vào DB và gửi thông báo
 export const markAsCompleted = async (req, res) => {
   try {
     const { registrationId } = req.params;
-    const { performance } = req.body; // Lấy đánh giá từ Frontend gửi lên
+    const { performance } = req.body;
 
     // 1. Validate input
     const validPerformance = ["GOOD", "AVERAGE", "BAD", "NO_SHOW"];
-    // Nếu không gửi performance lên thì mặc định là GOOD (hoặc trả lỗi tùy bạn)
     const rating = validPerformance.includes(performance)
       ? performance
       : "GOOD";
@@ -207,32 +240,28 @@ export const markAsCompleted = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn đăng ký." });
     }
 
-    // Kiểm tra nếu đã hoàn thành rồi thì không cộng điểm lại
     if (registration.status === "completed") {
       return res
         .status(400)
         .json({ message: "Đơn này đã được đánh dấu hoàn thành trước đó." });
     }
 
-    const eventPoints = registration.event.points || 0; // Điểm gốc của sự kiện
+    const eventPoints = registration.event.points || 0;
     let pointsToAdd = 0;
-    let statusToUpdate = "completed"; // Mặc định là hoàn thành
 
     // 3. Tính điểm dựa trên mức độ hoàn thành
     switch (rating) {
-      case "GOOD": // Tốt: 100% điểm
+      case "GOOD":
         pointsToAdd = eventPoints;
         break;
-      case "AVERAGE": // Trung bình: 1/2 điểm (lấy phần nguyên)
+      case "AVERAGE":
         pointsToAdd = Math.floor(eventPoints / 2);
         break;
-      case "BAD": // Tệ: 1/5 điểm (lấy phần nguyên)
+      case "BAD":
         pointsToAdd = Math.floor(eventPoints / 5);
         break;
-      case "NO_SHOW": // Không tham gia: Trừ 10 điểm
+      case "NO_SHOW":
         pointsToAdd = -10;
-        // Nếu không tham gia thì có thể set status là "canceled" hoặc vẫn "completed" để ghi nhận manager đã xử lý.
-        // Ở đây mình để "completed" để đánh dấu là quy trình duyệt đã xong, nhưng điểm bị trừ.
         break;
       default:
         pointsToAdd = eventPoints;
@@ -245,26 +274,23 @@ export const markAsCompleted = async (req, res) => {
       });
     }
 
-    // 5. Cập nhật trạng thái Registration
-    registration.status = statusToUpdate;
-    // Nếu bạn muốn lưu lại đánh giá vào DB, bạn cần thêm trường "performance" vào Registration Model trước
-    // registration.performance = rating;
-    await registration.save();
+    // 5. Cập nhật trạng thái và Lưu đánh giá
+    registration.status = "completed";
+    registration.performance = rating;
+
+    const updatedReg = await registration.save();
 
     res.status(200).json({
-      message: `Đã đánh giá ${rating}. User được ${
-        pointsToAdd > 0 ? "+" : ""
-      }${pointsToAdd} điểm.`,
-      registration,
+      message: `Đã đánh giá ${rating}. User nhận ${pointsToAdd} điểm.`,
+      registration: updatedReg,
     });
 
-    // 6. Gửi thông báo (Notification)
-    if (registration) {
+    // 6. Gửi thông báo
+    if (updatedReg) {
       try {
-        const volunteerId = registration.volunteer;
+        const volunteerId = updatedReg.volunteer;
         let message = "";
 
-        // Tùy chỉnh nội dung thông báo
         if (rating === "NO_SHOW") {
           message = `Bạn bị trừ 10 điểm vì không tham gia sự kiện ${registration.event.name}.`;
         } else {
@@ -272,12 +298,12 @@ export const markAsCompleted = async (req, res) => {
         }
 
         const url = `${
-          process.env.CLIENT_URL || "http://localhost:5173"
+          process.env.CLIENT_URL || "http://localhost:3000"
         }/my-registrations`;
 
-        // Gọi hàm sendPushNotification của bạn (giả sử đã import)
-        // sendPushNotification(volunteerId, 'registration_approved', message, url).catch(...)
-        console.log(`🔔 Gửi thông báo tới ${volunteerId}: ${message}`);
+        sendPushNotification(volunteerId, "registration_approved", url).catch(
+          (err) => console.error("Push error (completed):", err)
+        );
       } catch (err) {
         console.error("Error triggering push on complete:", err);
       }

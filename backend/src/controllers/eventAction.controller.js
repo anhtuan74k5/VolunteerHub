@@ -16,20 +16,27 @@ export const handleEventAction = async (req, res) => {
     if (!event)
       return res.status(404).json({ message: "Sự kiện không tồn tại" });
 
-    // --- CASE 1: XỬ LÝ LIKE (Giữ nguyên) ---
+    // --- CASE 1: LIKE (Logic Toggle - Giữ nguyên) ---
     if (type === "LIKE") {
       const existingLike = await EventAction.findOne({
         user: userId,
         event: eventId,
         type: "LIKE",
       });
+      let updatedEvent;
+
       if (existingLike) {
         await EventAction.findByIdAndDelete(existingLike._id);
-        await Event.findByIdAndUpdate(eventId, { $inc: { likesCount: -1 } });
+        updatedEvent = await Event.findByIdAndUpdate(
+          eventId,
+          { $inc: { likesCount: -1 } },
+          { new: true }
+        );
         return res.status(200).json({
           message: "Đã bỏ thích",
           liked: false,
-          likesCount: event.likesCount - 1,
+          likesCount: updatedEvent.likesCount,
+          sharesCount: updatedEvent.sharesCount,
         });
       } else {
         await EventAction.create({
@@ -37,38 +44,79 @@ export const handleEventAction = async (req, res) => {
           event: eventId,
           type: "LIKE",
         });
-        await Event.findByIdAndUpdate(eventId, { $inc: { likesCount: 1 } });
+        updatedEvent = await Event.findByIdAndUpdate(
+          eventId,
+          { $inc: { likesCount: 1 } },
+          { new: true }
+        );
         return res.status(200).json({
           message: "Đã thích",
           liked: true,
-          likesCount: event.likesCount + 1,
+          likesCount: updatedEvent.likesCount,
+          sharesCount: updatedEvent.sharesCount,
         });
       }
     }
 
-    // --- CASE 2: XỬ LÝ SHARE (Cập nhật logic trả về Link) ---
+    // --- CASE 2: SHARE (Sửa logic: Chỉ tính 1 lần) ---
     if (type === "SHARE") {
-      // 1. Ghi nhận hành động vào DB
-      await EventAction.create({ user: userId, event: eventId, type: "SHARE" });
-      await Event.findByIdAndUpdate(eventId, { $inc: { sharesCount: 1 } });
-
-      // 2. Tạo link sự kiện
-      // Lấy domain từ biến môi trường hoặc mặc định localhost
+      // 1. Tạo link chia sẻ trước
       const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
-      const shareLink = `${clientUrl}/su-kien/${eventId}`;
+      const shareLink = `${clientUrl}/events/${eventId}`;
 
-      // 3. Trả về Link cho Frontend
-      return res.status(200).json({
-        message: "Đã ghi nhận chia sẻ",
-        shareLink: shareLink,
+      // 2. Kiểm tra xem user đã share chưa
+      const existingShare = await EventAction.findOne({
+        user: userId,
+        event: eventId,
+        type: "SHARE",
       });
+
+      // A. Nếu đã share rồi -> Trả về link nhưng KHÔNG tăng count
+      if (existingShare) {
+        return res.status(200).json({
+          message: "Bạn đã chia sẻ sự kiện này rồi (Lấy lại link)",
+          shareLink: shareLink,
+          likesCount: event.likesCount,
+          sharesCount: event.sharesCount, // Giữ nguyên số cũ
+        });
+      } else {
+        // B. Nếu chưa share -> Tạo log mới và TĂNG count
+        await EventAction.create({
+          user: userId,
+          event: eventId,
+          type: "SHARE",
+        });
+
+        const updatedEvent = await Event.findByIdAndUpdate(
+          eventId,
+          { $inc: { sharesCount: 1 } },
+          { new: true }
+        );
+
+        return res.status(200).json({
+          message: "Đã ghi nhận chia sẻ lần đầu",
+          shareLink: shareLink,
+          likesCount: updatedEvent.likesCount,
+          sharesCount: updatedEvent.sharesCount,
+        });
+      }
     }
 
-    // --- CASE 3: XỬ LÝ VIEW (Giữ nguyên) ---
+    // --- CASE 3: VIEW (Giữ nguyên: View thì vẫn cộng dồn) ---
     if (type === "VIEW") {
       await EventAction.create({ user: userId, event: eventId, type: "VIEW" });
-      await Event.findByIdAndUpdate(eventId, { $inc: { viewsCount: 1 } });
-      return res.status(200).json({ message: "Đã tăng lượt xem" });
+      const updatedEvent = await Event.findByIdAndUpdate(
+        eventId,
+        { $inc: { viewsCount: 1 } },
+        { new: true }
+      );
+
+      return res.status(200).json({
+        message: "Đã tăng lượt xem",
+        viewsCount: updatedEvent.viewsCount,
+        likesCount: updatedEvent.likesCount,
+        sharesCount: updatedEvent.sharesCount,
+      });
     }
   } catch (error) {
     console.error("Lỗi event action:", error);

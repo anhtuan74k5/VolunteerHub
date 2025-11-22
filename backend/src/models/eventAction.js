@@ -21,7 +21,6 @@ const eventActionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-eventActionSchema.index({ user: 1, event: 1, type: 1 });
-
+eventActionSchema.index({ user: 1, event: 1, type: 1 }, { unique: true });
 const EventAction = mongoose.model("EventAction", eventActionSchema);
 export default EventAction;

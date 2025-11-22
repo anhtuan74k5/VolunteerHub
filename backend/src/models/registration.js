@@ -18,8 +18,14 @@ const registrationSchema = new mongoose.Schema(
     // Trạng thái của đơn đăng ký
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "completed", "canceled"], // Các giá trị hợp lệ
+      enum: ["pending", "approved", "rejected", "completed", "cancelled"], // Các giá trị hợp lệ
       default: "pending", // Giá trị mặc định
+    },
+
+    performance: {
+      type: String,
+      enum: ["GOOD", "AVERAGE", "BAD", "NO_SHOW", null],
+      default: null,
     },
     // Yêu cầu hủy đăng ký
     cancelRequest: {
