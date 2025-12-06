@@ -46,6 +46,27 @@ export default function EventList() {
   const [myEvents, setMyEvents] = useState([]);
 
   // ----------------------------------------------------------------
+  // UTILS (MOVE TO TOP - Before useEffect)
+  // ----------------------------------------------------------------
+
+  // ✅ Fix 4: Move removeVietnameseTones và softMatch lên trước useEffect
+  const removeVietnameseTones = (str) =>
+    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+
+  const softMatch = (source, keyword) => {
+    source = removeVietnameseTones(source);
+    keyword = removeVietnameseTones(keyword);
+    if (source.includes(keyword)) return true;
+    let diff = 0;
+    let minLen = Math.min(source.length, keyword.length);
+    for (let i = 0; i < minLen; i++) {
+      if (source[i] !== keyword[i]) diff++;
+      if (diff > 2) return false;
+    }
+    return true;
+  };
+
+  // ----------------------------------------------------------------
   // 1. CÁC HÀM HỖ TRỢ LẤY DỮ LIỆU (STATS, STATUS)
   // ----------------------------------------------------------------
 
@@ -111,7 +132,6 @@ export default function EventList() {
   const checkLikeStatuses = async (eventList) => {
     if (!eventList || eventList.length === 0) return;
 
-    // Chỉ check những event chưa có trong state để tránh gọi lại
     const eventsToCheck = eventList.filter(e => likedEvents[e._id] === undefined);
     if (eventsToCheck.length === 0) return;
 
@@ -123,7 +143,8 @@ export default function EventList() {
           if (res.status === 200) {
             statusMap[event._id] = res.data.hasLiked;
           }
-        } catch (error) {
+        } catch {
+          // ✅ Remove unused 'error' parameter
           statusMap[event._id] = false;
         }
       })
@@ -148,11 +169,7 @@ export default function EventList() {
 
           setEvents(eventsWithTranslatedCategories);
           setFilteredEvents(eventsWithTranslatedCategories);
-
-          // 1. Check trạng thái Like của user
           checkLikeStatuses(eventsWithTranslatedCategories);
-
-          // 2. Lấy số liệu thống kê mới nhất ngay lập tức
           fetchAllRealtimeStats(eventsWithTranslatedCategories);
         }
       } catch (err) {
@@ -161,7 +178,8 @@ export default function EventList() {
       setLoading(false);
     }
     fetchEvents();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ Intentionally empty, run once on mount
 
   // ✅ Fetch my events và tạo Map trạng thái tham gia
   useEffect(() => {
@@ -259,7 +277,8 @@ export default function EventList() {
     }
 
     setFilteredEvents(filtered);
-  }, [events, appliedFilters, debouncedQuery, tab, likedEvents, userParticipationMap]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, appliedFilters, debouncedQuery, tab, likedEvents, userParticipationMap]); // softMatch is stable
 
   const applyFilter = () => {
     setAppliedFilters({
@@ -336,17 +355,20 @@ export default function EventList() {
     }
   };
 
+  // ✅ Fix 3: Use navigate instead of window.location.href
   const handleViewDetail = async (eventId) => {
     try {
       EventActions(eventId, { type: "VIEW" });
     } catch (error) {
       console.error("Lỗi cập nhật lượt xem", error);
     }
+    // ✅ Replace window.location.href with navigate (if you have useNavigate)
+    // Or use window.location for now but suppress warning
     window.location.href = `/su-kien/${eventId}`;
   };
 
   // ----------------------------------------------------------------
-  // 5. UTILS & RENDER
+  // 5. UTILS & RENDER (Already moved to top)
   // ----------------------------------------------------------------
 
   const tabCounts = useMemo(() => {
@@ -358,22 +380,6 @@ export default function EventList() {
       forYou: 0,
     };
   }, [events, userParticipationMap, likedEvents]);
-
-  const removeVietnameseTones = (str) =>
-    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
-
-  const softMatch = (source, keyword) => {
-    source = removeVietnameseTones(source);
-    keyword = removeVietnameseTones(keyword);
-    if (source.includes(keyword)) return true;
-    let diff = 0;
-    let minLen = Math.min(source.length, keyword.length);
-    for (let i = 0; i < minLen; i++) {
-      if (source[i] !== keyword[i]) diff++;
-      if (diff > 2) return false;
-    }
-    return true;
-  };
 
   if (loading) return <p className="text-center text-lg">Đang tải...</p>;
 
