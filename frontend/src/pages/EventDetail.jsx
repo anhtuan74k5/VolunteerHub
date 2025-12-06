@@ -150,6 +150,12 @@ export default function EventDetail() {
         }
     };
 
+    // ✅ Handler filter by category
+    const handleFilterByCategory = (category) => {
+        localStorage.setItem('filterCategory', category);
+        navigate('/hoat-dong');
+    };
+
     if (loading) return <p className="text-center mt-10 text-lg">Đang tải...</p>;
     if (!event) return <p className="text-center mt-10 text-lg text-red-500">Không tìm thấy sự kiện!</p>;
 
@@ -206,10 +212,17 @@ export default function EventDetail() {
                         </span>
                     </div>
 
+                    {/* ✅ Make category clickable */}
                     <div className="flex items-center gap-3">
                         <Tag size={20} />
                         <span>
-                            <strong>Loại sự kiện:</strong> {categoryMapping[event.category] || event.category || "Khác"}
+                            <strong>Loại sự kiện:</strong>{" "}
+                            <button
+                                onClick={() => handleFilterByCategory(categoryMapping[event.category] || event.category)}
+                                className="text-blue-600 hover:underline font-medium transition"
+                            >
+                                {categoryMapping[event.category] || event.category || "Khác"}
+                            </button>
                         </span>
                     </div>
 

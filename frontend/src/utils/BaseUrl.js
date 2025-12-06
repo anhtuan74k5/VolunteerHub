@@ -3,7 +3,10 @@ import { DOMAIN_BE, LOCALSTORAGE_USER } from "./Constants";
 import { getLocalStorage } from "./Configs";
 
 export const http = axios.create({
-    baseURL: DOMAIN_BE,
+    baseURL: 'http://localhost:5000/api',
+    headers: {
+        'Content-Type': 'application/json', // ✅ Đảm bảo có header này
+    },
     timeout: 10000
 });
 

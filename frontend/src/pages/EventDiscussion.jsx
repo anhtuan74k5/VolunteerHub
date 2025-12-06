@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { GetEventDetail } from '../services/EventService';
 import { GetEventPosts, CreatePost, ToggleLikePost, DeletePost } from '../services/PostService';
 import { GetUserInfo } from '../services/UserService';
-import { Heart, Send, Trash2, ArrowLeft } from 'lucide-react';
+import { Heart, Send, Trash2, ArrowLeft, MessageCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { CreateComment, GetComments, DeleteComment } from '../services/CommentService';
 
 export default function EventDiscussion() {
   const { eventId } = useParams();
@@ -16,6 +17,9 @@ export default function EventDiscussion() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [canAccess, setCanAccess] = useState(false);
+  const [comments, setComments] = useState({}); // { postId: [comments] }
+  const [newComment, setNewComment] = useState({}); // { postId: commentText }
+  const [showComments, setShowComments] = useState({}); // { postId: true/false }
 
   // Fetch user info
   useEffect(() => {
@@ -199,6 +203,99 @@ export default function EventDiscussion() {
     }
   };
 
+  // ✅ Load comments khi show
+  const handleToggleComments = async (postId) => {
+    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
+
+    if (!comments[postId]) {
+      try {
+        const res = await GetComments(postId);
+        if (res.status === 200) {
+          setComments(prev => ({ ...prev, [postId]: res.data }));
+        }
+      } catch {
+        // ✅ Remove unused 'err' parameter
+        console.error('Lỗi load comments');
+      }
+    }
+  };
+
+  // ✅ Thêm comment
+  const handleAddComment = async (postId) => {
+    if (!newComment[postId]?.trim()) return;
+
+    try {
+      const res = await CreateComment(postId, newComment[postId]);
+      if (res.status === 201) {
+        setComments(prev => ({
+          ...prev,
+          [postId]: [res.data, ...(prev[postId] || [])]
+        }));
+        setNewComment(prev => ({ ...prev, [postId]: '' }));
+
+        // Cập nhật commentCount
+        setPosts(prevPosts => prevPosts.map(post =>
+          post._id === postId
+            ? { ...post, commentCount: (post.commentCount || 0) + 1 }
+            : post
+        ));
+      }
+    } catch {
+      // ✅ Remove unused 'err' parameter
+      Swal.fire({
+        icon: 'error',
+        title: 'Lỗi',
+        text: 'Không thể thêm comment',
+        confirmButtonColor: '#DDB958'
+      });
+    }
+  };
+
+  // ✅ Xóa comment
+  const handleDeleteComment = async (postId, commentId) => {
+    const result = await Swal.fire({
+      title: 'Xóa comment?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#DDB958',
+      confirmButtonText: 'Xóa',
+      cancelButtonText: 'Hủy'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await DeleteComment(commentId);
+        setComments(prev => ({
+          ...prev,
+          [postId]: prev[postId].filter(c => c._id !== commentId)
+        }));
+
+        // Giảm commentCount
+        setPosts(prevPosts => prevPosts.map(post =>
+          post._id === postId
+            ? { ...post, commentCount: Math.max((post.commentCount || 0) - 1, 0) }
+            : post
+        ));
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Đã xóa',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } catch {
+        // ✅ Remove unused 'err' parameter
+        Swal.fire({
+          icon: 'error',
+          title: 'Lỗi',
+          text: 'Không thể xóa comment',
+          confirmButtonColor: '#DDB958'
+        });
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -256,63 +353,130 @@ export default function EventDiscussion() {
 
       {/* Danh sách bài viết */}
       <div className="space-y-4">
-        {posts.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
-            Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ!
-          </div>
-        ) : (
-          posts.map((post) => {
-            const isLiked = post.likes?.includes(currentUser?._id);
-            const canDelete = currentUser?.role === 'ADMIN' || post.author._id === currentUser?._id;
+        {posts.map((post) => {
+          const isLiked = post.likes?.includes(currentUser?._id);
+          const canDelete = currentUser?.role === 'ADMIN' || post.author._id === currentUser?._id;
 
-            return (
-              <div key={post._id} className="bg-white rounded-lg shadow-md p-6">
-                {/* Header post */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
+          return (
+            <div key={post._id} className="bg-white rounded-lg shadow-md p-6">
+              {/* Header post */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={post.author.avatar || '/default-avatar.png'}
+                    alt={post.author.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div>
+                    <p className="font-semibold text-gray-800">{post.author.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(post.createdAt).toLocaleString('vi-VN')}
+                    </p>
+                  </div>
+                </div>
+
+                {canDelete && (
+                  <button
+                    onClick={() => handleDeletePost(post._id)}
+                    className="text-red-500 hover:text-red-700 transition"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
+              </div>
+
+              {/* Content */}
+              <p className="text-gray-700 mb-4 whitespace-pre-wrap">{post.content}</p>
+
+              {/* Actions */}
+              <div className="flex items-center gap-6 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => handleToggleLike(post._id)}
+                  className="flex items-center gap-2 hover:scale-110 transition-transform"
+                >
+                  <Heart
+                    size={22}
+                    className={isLiked ? 'text-red-500 fill-red-500' : 'text-gray-500'}
+                  />
+                  <span className="text-gray-700">{post.likes?.length || 0}</span>
+                </button>
+
+                {/* ✅ Nút Comment */}
+                <button
+                  onClick={() => handleToggleComments(post._id)}
+                  className="flex items-center gap-2 hover:scale-110 transition-transform"
+                >
+                  <MessageCircle size={22} className="text-blue-500" />
+                  <span className="text-gray-700">{post.commentCount || 0}</span>
+                </button>
+              </div>
+
+              {/* ✅ Comment Section */}
+              {showComments[post._id] && (
+                <div className="mt-4 border-t pt-4">
+                  {/* Form thêm comment */}
+                  <div className="flex gap-2 mb-4">
                     <img
-                      src={post.author.avatar || '/default-avatar.png'}
-                      alt={post.author.name}
-                      className="w-10 h-10 rounded-full object-cover"
+                      src={currentUser?.avatar || '/default-avatar.png'}
+                      alt="Avatar"
+                      className="w-8 h-8 rounded-full object-cover"
                     />
-                    <div>
-                      <p className="font-semibold text-gray-800">{post.author.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(post.createdAt).toLocaleString('vi-VN')}
-                      </p>
-                    </div>
+                    <input
+                      type="text"
+                      value={newComment[post._id] || ''}
+                      onChange={(e) => setNewComment(prev => ({ ...prev, [post._id]: e.target.value }))}
+                      placeholder="Viết comment..."
+                      className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#DDB958]"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') handleAddComment(post._id);
+                      }}
+                    />
+                    <button
+                      onClick={() => handleAddComment(post._id)}
+                      className="bg-[#DDB958] text-white px-4 py-2 rounded-full hover:bg-[#CDA550]"
+                    >
+                      Gửi
+                    </button>
                   </div>
 
-                  {canDelete && (
-                    <button
-                      onClick={() => handleDeletePost(post._id)}
-                      className="text-red-500 hover:text-red-700 transition"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  )}
-                </div>
+                  {/* Danh sách comments */}
+                  <div className="space-y-3">
+                    {comments[post._id]?.map((comment) => {
+                      const canDeleteComment = currentUser?.role === 'ADMIN' || comment.author._id === currentUser?._id;
 
-                {/* Content */}
-                <p className="text-gray-700 mb-4 whitespace-pre-wrap">{post.content}</p>
-
-                {/* Actions */}
-                <div className="flex items-center gap-6 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => handleToggleLike(post._id)}
-                    className="flex items-center gap-2 hover:scale-110 transition-transform"
-                  >
-                    <Heart
-                      size={22}
-                      className={isLiked ? 'text-red-500 fill-red-500' : 'text-gray-500'}
-                    />
-                    <span className="text-gray-700">{post.likes?.length || 0}</span>
-                  </button>
+                      return (
+                        <div key={comment._id} className="flex gap-2">
+                          <img
+                            src={comment.author.avatar || '/default-avatar.png'}
+                            alt={comment.author.name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                          <div className="flex-1 bg-gray-100 rounded-lg px-4 py-2">
+                            <div className="flex justify-between items-start">
+                              <p className="font-semibold text-sm">{comment.author.name}</p>
+                              {canDeleteComment && (
+                                <button
+                                  onClick={() => handleDeleteComment(post._id, comment._id)}
+                                  className="text-red-500 hover:text-red-700 text-xs"
+                                >
+                                  Xóa
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-gray-700 text-sm">{comment.content}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(comment.createdAt).toLocaleString('vi-VN')}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -381,6 +381,16 @@ export default function EventList() {
     };
   }, [events, userParticipationMap, likedEvents]);
 
+  // ✅ Đọc category filter từ localStorage khi mount
+  useEffect(() => {
+    const savedCategory = localStorage.getItem('filterCategory');
+    if (savedCategory) {
+      setFilters(prev => ({ ...prev, category: savedCategory }));
+      setAppliedFilters(prev => ({ ...prev, category: savedCategory }));
+      localStorage.removeItem('filterCategory');
+    }
+  }, []);
+
   if (loading) return <p className="text-center text-lg">Đang tải...</p>;
 
   return (
@@ -417,6 +427,22 @@ export default function EventList() {
         <button className="bg-[#DCBA58] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#caa445]" onClick={applyFilter}>
           Lọc
         </button>
+
+        {/* ✅ Badge hiển thị category đang filter với nút X để clear */}
+        {appliedFilters.category && (
+          <div className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full">
+            <span className="font-medium">{appliedFilters.category}</span>
+            <button
+              onClick={() => {
+                setFilters(prev => ({ ...prev, category: "" }));
+                setAppliedFilters(prev => ({ ...prev, category: "" }));
+              }}
+              className="hover:text-blue-900 font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         <div className="flex w-[35vw] items-center border border-gray-300 rounded-full px-3 py-2 ml-10 shadow shadow-md">
           <input type="text" name="query" value={filters.query} placeholder="Tìm kiếm tên sự kiện hoặc địa điểm..." className="flex-1 outline-none" onChange={handleFilterChange} />

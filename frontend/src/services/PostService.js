@@ -4,7 +4,10 @@ import { http } from "../utils/BaseUrl";
 export const GetEventPosts = (eventId) => http.get(`/posts/event/${eventId}`);
 
 // Tạo post mới
-export const CreatePost = (eventId, content) => http.post(`/posts/event/${eventId}`, { content });
+export const CreatePost = (eventId, content) => {
+  console.log("🚀 CreatePost called with:", { eventId, content }); // ✅ Debug log
+  return http.post("/posts", { eventId, content });
+};
 
 // Like/Unlike post
 export const ToggleLikePost = (postId) => http.post(`/posts/${postId}/like`);
