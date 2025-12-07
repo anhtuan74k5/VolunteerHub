@@ -15,7 +15,6 @@ router.post("/", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "postId và content là bắt buộc" });
     }
 
-    // ✅ Lấy thông tin post để biết event
     const post = await Post.findById(postId);
     if (!post) {
       return res.status(404).json({ message: "Post không tồn tại" });
@@ -28,17 +27,25 @@ router.post("/", verifyToken, async (req, res) => {
     });
 
     await comment.save();
+    // ✅ Populate author TRƯỚC KHI trả về
     await comment.populate("author", "name avatar");
 
-    // ✅ QUAN TRỌNG: Tăng commentCount và SAVE vào database
-    await Post.findByIdAndUpdate(
+    const updatedPost = await Post.findByIdAndUpdate(
       postId,
       { $inc: { commentCount: 1 } },
-      { new: true } // ✅ Return document sau khi update
+      { new: true }
     );
 
-    console.log("✅ Comment created and commentCount updated");
-    res.status(201).json(comment);
+    console.log("✅ Comment created, commentCount:", updatedPost.commentCount);
+
+    // ✅ Trả về comment đã populate
+    res.status(201).json({
+      comment,
+      updatedPost: {
+        _id: updatedPost._id,
+        commentCount: updatedPost.commentCount,
+      },
+    });
   } catch (error) {
     console.error("❌ Error creating comment:", error);
     res.status(400).json({ message: error.message });

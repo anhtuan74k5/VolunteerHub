@@ -220,28 +220,38 @@ export default function EventDiscussion() {
     }
   };
 
-  // ✅ Thêm comment
+  // ✅ Thêm comment - CẬP NHẬT commentCount từ backend response
   const handleAddComment = async (postId) => {
     if (!newComment[postId]?.trim()) return;
 
     try {
       const res = await CreateComment(postId, newComment[postId]);
       if (res.status === 201) {
+        // ✅ Thêm comment vào list
         setComments(prev => ({
           ...prev,
-          [postId]: [res.data, ...(prev[postId] || [])]
+          [postId]: [res.data.comment, ...(prev[postId] || [])]
         }));
         setNewComment(prev => ({ ...prev, [postId]: '' }));
 
-        // Cập nhật commentCount
-        setPosts(prevPosts => prevPosts.map(post =>
-          post._id === postId
-            ? { ...post, commentCount: (post.commentCount || 0) + 1 }
-            : post
-        ));
+        // ✅ Cập nhật commentCount từ backend response (nếu có)
+        if (res.data.updatedPost) {
+          setPosts(prevPosts => prevPosts.map(post =>
+            post._id === postId
+              ? { ...post, commentCount: res.data.updatedPost.commentCount }
+              : post
+          ));
+        } else {
+          // ✅ Fallback: Tăng local nếu backend không trả về
+          setPosts(prevPosts => prevPosts.map(post =>
+            post._id === postId
+              ? { ...post, commentCount: (post.commentCount || 0) + 1 }
+              : post
+          ));
+        }
       }
-    } catch {
-      // ✅ Remove unused 'err' parameter
+    } catch (err) {
+      console.error('Lỗi thêm comment:', err);
       Swal.fire({
         icon: 'error',
         title: 'Lỗi',
@@ -251,7 +261,7 @@ export default function EventDiscussion() {
     }
   };
 
-  // ✅ Xóa comment
+  // ✅ Xóa comment - CẬP NHẬT commentCount từ backend response
   const handleDeleteComment = async (postId, commentId) => {
     const result = await Swal.fire({
       title: 'Xóa comment?',
@@ -265,18 +275,29 @@ export default function EventDiscussion() {
 
     if (result.isConfirmed) {
       try {
-        await DeleteComment(commentId);
+        const res = await DeleteComment(commentId);
+        
+        // ✅ Xóa comment khỏi list
         setComments(prev => ({
           ...prev,
           [postId]: prev[postId].filter(c => c._id !== commentId)
         }));
 
-        // Giảm commentCount
-        setPosts(prevPosts => prevPosts.map(post =>
-          post._id === postId
-            ? { ...post, commentCount: Math.max((post.commentCount || 0) - 1, 0) }
-            : post
-        ));
+        // ✅ Cập nhật commentCount từ backend response (nếu có)
+        if (res.data.updatedPost) {
+          setPosts(prevPosts => prevPosts.map(post =>
+            post._id === postId
+              ? { ...post, commentCount: res.data.updatedPost.commentCount }
+              : post
+          ));
+        } else {
+          // ✅ Fallback: Giảm local nếu backend không trả về
+          setPosts(prevPosts => prevPosts.map(post =>
+            post._id === postId
+              ? { ...post, commentCount: Math.max((post.commentCount || 0) - 1, 0) }
+              : post
+          ));
+        }
 
         Swal.fire({
           icon: 'success',
@@ -284,8 +305,8 @@ export default function EventDiscussion() {
           timer: 1500,
           showConfirmButton: false
         });
-      } catch {
-        // ✅ Remove unused 'err' parameter
+      } catch (err) {
+        console.error('Lỗi xóa comment:', err);
         Swal.fire({
           icon: 'error',
           title: 'Lỗi',
@@ -354,6 +375,12 @@ export default function EventDiscussion() {
       {/* Danh sách bài viết */}
       <div className="space-y-4">
         {posts.map((post) => {
+          // ✅ Kiểm tra an toàn cho post.author
+          if (!post.author) {
+            console.warn('Post missing author:', post._id);
+            return null;
+          }
+
           const isLiked = post.likes?.includes(currentUser?._id);
           const canDelete = currentUser?.role === 'ADMIN' || post.author._id === currentUser?._id;
 
@@ -363,12 +390,12 @@ export default function EventDiscussion() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <img
-                    src={post.author.avatar || '/default-avatar.png'}
-                    alt={post.author.name}
+                    src={post.author?.avatar || '/default-avatar.png'}
+                    alt={post.author?.name || 'User'}
                     className="w-10 h-10 rounded-full object-cover"
                   />
                   <div>
-                    <p className="font-semibold text-gray-800">{post.author.name}</p>
+                    <p className="font-semibold text-gray-800">{post.author?.name || 'Unknown'}</p>
                     <p className="text-sm text-gray-500">
                       {new Date(post.createdAt).toLocaleString('vi-VN')}
                     </p>
@@ -441,36 +468,38 @@ export default function EventDiscussion() {
 
                   {/* Danh sách comments */}
                   <div className="space-y-3">
-                    {comments[post._id]?.map((comment) => {
-                      const canDeleteComment = currentUser?.role === 'ADMIN' || comment.author._id === currentUser?._id;
+                    {comments[post._id]
+                      ?.filter(comment => comment && comment.author) // ✅ Filter out invalid comments
+                      .map((comment) => {
+                        const canDeleteComment = currentUser?.role === 'ADMIN' || comment.author._id === currentUser?._id;
 
-                      return (
-                        <div key={comment._id} className="flex gap-2">
-                          <img
-                            src={comment.author.avatar || '/default-avatar.png'}
-                            alt={comment.author.name}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                          <div className="flex-1 bg-gray-100 rounded-lg px-4 py-2">
-                            <div className="flex justify-between items-start">
-                              <p className="font-semibold text-sm">{comment.author.name}</p>
-                              {canDeleteComment && (
-                                <button
-                                  onClick={() => handleDeleteComment(post._id, comment._id)}
-                                  className="text-red-500 hover:text-red-700 text-xs"
-                                >
-                                  Xóa
-                                </button>
-                              )}
+                        return (
+                          <div key={comment._id} className="flex gap-2">
+                            <img
+                              src={comment.author?.avatar || '/default-avatar.png'}
+                              alt={comment.author?.name || 'User'}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                            <div className="flex-1 bg-gray-100 rounded-lg px-4 py-2">
+                              <div className="flex justify-between items-start">
+                                <p className="font-semibold text-sm">{comment.author?.name || 'Unknown'}</p>
+                                {canDeleteComment && (
+                                  <button
+                                    onClick={() => handleDeleteComment(post._id, comment._id)}
+                                    className="text-red-500 hover:text-red-700 text-xs"
+                                  >
+                                    Xóa
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-gray-700 text-sm">{comment.content}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(comment.createdAt).toLocaleString('vi-VN')}
+                              </p>
                             </div>
-                            <p className="text-gray-700 text-sm">{comment.content}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(comment.createdAt).toLocaleString('vi-VN')}
-                            </p>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 </div>
               )}

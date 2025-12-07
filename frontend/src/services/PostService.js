@@ -1,16 +1,18 @@
 import { http } from "../utils/BaseUrl";
 
-// Lấy danh sách posts của 1 event
-export const GetEventPosts = (eventId) => http.get(`/posts/event/${eventId}`);
-
-// Tạo post mới
-export const CreatePost = (eventId, content) => {
-  console.log("🚀 CreatePost called with:", { eventId, content }); // ✅ Debug log
-  return http.post("/posts", { eventId, content });
+// ✅ Fix: Đổi từ /posts/event/:eventId sang /posts/:eventId
+export const GetEventPosts = async (eventId) => {
+  return await http.get(`/posts/${eventId}`);
 };
 
-// Like/Unlike post
-export const ToggleLikePost = (postId) => http.post(`/posts/${postId}/like`);
+export const CreatePost = async (eventId, content) => {
+  return await http.post(`/posts/${eventId}`, { content });
+};
 
-// Xóa post
-export const DeletePost = (postId) => http.delete(`/posts/${postId}`);
+export const DeletePost = async (postId) => {
+  return await http.delete(`/posts/${postId}`);
+};
+
+export const ToggleLikePost = async (postId) => {
+  return await http.post(`/actions/like`, { postId });
+};
