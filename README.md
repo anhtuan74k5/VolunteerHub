@@ -81,7 +81,7 @@ The project is split into two main directories: `frontend` and `backend`.
     ```
 3.  Start the React application:
     ```bash
-    npm start
+    npm run dev
     ```
 The application will be available at `http://localhost:3000`, which will connect to the backend server at `http://localhost:5000`.
 
