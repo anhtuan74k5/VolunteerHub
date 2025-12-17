@@ -319,6 +319,7 @@ export default function EventDiscussion() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [visibleComments, setVisibleComments] = useState({});
+  const [openMenuPostId, setOpenMenuPostId] = useState(null);
 
   const [commentsMap, setCommentsMap] = useState({});
   const postInputRef = useRef(null);
@@ -411,6 +412,26 @@ export default function EventDiscussion() {
       loadPosts();
     }
   }, [canAccess, eventId]);
+
+  // Đóng menu khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openMenuPostId !== null) {
+        const menuElement = document.querySelector('.post-menu');
+        const buttonElement = event.target.closest('button');
+
+        if (menuElement && !menuElement.contains(event.target) &&
+          (!buttonElement || !buttonElement.querySelector('.lucide-more-vertical'))) {
+          setOpenMenuPostId(null);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuPostId]);
 
   // Format ngày giờ
   const formatDate = (dateString) => {
@@ -687,7 +708,7 @@ export default function EventDiscussion() {
               <div className="flex items-center gap-1.5">
                 <Users size={14} className="text-gray-500" />
                 <span className="text-xs text-gray-600">
-                  {event.requiredParticipants} người
+                  {event.currentParticipants || 0}/{event.maxParticipants || 0} người
                 </span>
               </div>
             </div>
@@ -716,9 +737,8 @@ export default function EventDiscussion() {
             ref={postInputRef}
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
-            placeholder={`${
-              currentUser?.name || "Bạn"
-            } ơi, viết cập nhật cho sự kiện này...`}
+            placeholder={`${currentUser?.name || "Bạn"
+              } ơi, viết cập nhật cho sự kiện này...`}
             className="composer-textarea"
             rows="3"
             disabled={isPosting}
@@ -816,19 +836,27 @@ export default function EventDiscussion() {
                   </div>
 
                   {canDelete && (
-                    <div className="relative group">
-                      <button className="p-2 hover:bg-gray-100 rounded-full transition">
+                    <div className="relative">
+                      <button
+                        onClick={() => setOpenMenuPostId(openMenuPostId === post._id ? null : post._id)}
+                        className="p-2 hover:bg-gray-100 rounded-full transition"
+                      >
                         <MoreVertical size={18} className="text-gray-600" />
                       </button>
-                      <div className="post-menu">
-                        <button
-                          onClick={() => handleDeletePost(post._id)}
-                          className="post-menu-item text-red-600"
-                        >
-                          <Trash2 size={16} />
-                          <span>Xóa bài viết</span>
-                        </button>
-                      </div>
+                      {openMenuPostId === post._id && (
+                        <div className="post-menu">
+                          <button
+                            onClick={() => {
+                              handleDeletePost(post._id);
+                              setOpenMenuPostId(null);
+                            }}
+                            className="post-menu-item text-red-600"
+                          >
+                            <Trash2 size={16} />
+                            <span>Xóa bài viết</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -873,15 +901,10 @@ export default function EventDiscussion() {
                 <div className="post-actions">
                   <button
                     onClick={() => handleToggleLike(post._id)}
-                    className={`action-btn ${
-                      isLiked ? "action-btn-active" : ""
-                    }`}
+                    className={`action-btn ${isLiked ? "action-btn-active" : ""
+                      }`}
                   >
-                    {isLiked ? (
-                      <Heart size={18} className="fill-current" />
-                    ) : (
-                      <ThumbsUp size={18} />
-                    )}
+                    <Heart size={18} className={isLiked ? "fill-current" : ""} />
                     <span>Thích</span>
                   </button>
 
@@ -891,25 +914,6 @@ export default function EventDiscussion() {
                   >
                     <MessageSquare size={18} />
                     <span>Bình luận</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      Swal.fire({
-                        icon: "info",
-                        title: "Tính năng đang phát triển",
-                        text: "Chức năng chia sẻ sẽ sớm được bổ sung",
-                        confirmButtonColor: "#DDB958",
-                        toast: true,
-                        position: "top-end",
-                        timer: 2000,
-                        showConfirmButton: false,
-                      });
-                    }}
-                    className="action-btn"
-                  >
-                    <Share2 size={18} />
-                    <span>Chia sẻ</span>
                   </button>
                 </div>
 

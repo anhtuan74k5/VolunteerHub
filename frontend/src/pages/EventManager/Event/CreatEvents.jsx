@@ -150,8 +150,8 @@ export default function CreateEvent() {
         onFinish={handleCreateEvent}
         initialValues={{ category: "Community", maxParticipants: 50 }}
       >
-        <Form.Item label="Tên sự kiện" name="name" rules={[{ required: true }]}>
-          <Input size="large" />
+        <Form.Item label="Tên sự kiện" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên sự kiện' }]}>
+          <Input size="large" placeholder="Nhập tên sự kiện..." />
         </Form.Item>
 
         <Form.Item label="Mô tả chi tiết" required>
@@ -177,16 +177,16 @@ export default function CreateEvent() {
           />
         </Form.Item>
 
-        <Form.Item label="Ngày bắt đầu" name="date" rules={[{ required: true }]}>
-          <DatePicker size="large" style={{ width: "100%" }} />
+        <Form.Item label="Ngày bắt đầu" name="date" rules={[{ required: true, message: 'Vui lòng chọn ngày bắt đầu' }]}>
+          <DatePicker size="large" style={{ width: "100%" }} placeholder="Chọn ngày bắt đầu" />
         </Form.Item>
 
-        <Form.Item label="Ngày kết thúc" name="endDate" rules={[{ required: true }]}>
-          <DatePicker size="large" style={{ width: "100%" }} />
+        <Form.Item label="Ngày kết thúc" name="endDate" rules={[{ required: true, message: 'Vui lòng chọn ngày kết thúc' }]}>
+          <DatePicker size="large" style={{ width: "100%" }} placeholder="Chọn ngày kết thúc" />
         </Form.Item>
 
-        <Form.Item label="Địa điểm" name="location" rules={[{ required: true }]}>
-          <Input size="large" />
+        <Form.Item label="Địa điểm" name="location" rules={[{ required: true, message: 'Vui lòng nhập địa điểm' }]}>
+          <Input size="large" placeholder="Nhập địa điểm tổ chức..." />
         </Form.Item>
 
         <Form.Item label="Loại sự kiện" name="category" rules={[{ required: true, message: 'Vui lòng chọn loại sự kiện' }]}>
@@ -199,8 +199,8 @@ export default function CreateEvent() {
           </Select>
         </Form.Item>
 
-        <Form.Item label="Số lượng tham gia tối đa" name="maxParticipants" rules={[{ required: true }]}>
-          <InputNumber size="large" min={1} max={1000} style={{ width: "100%" }} />
+        <Form.Item label="Số lượng tham gia tối đa" name="maxParticipants" rules={[{ required: true, message: 'Vui lòng nhập số lượng tham gia' }]}>
+          <InputNumber size="large" min={1} max={1000} style={{ width: "100%" }} placeholder="Nhập số lượng..." />
         </Form.Item>
 
         <Form.Item

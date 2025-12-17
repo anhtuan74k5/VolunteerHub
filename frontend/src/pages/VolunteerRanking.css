@@ -159,13 +159,21 @@
   padding: 0;
 }
 
+.ranking-table-card .ant-tabs {
+  padding: 20px;
+}
+
+.ranking-table-card .ant-tabs-nav {
+  margin-bottom: 20px;
+}
+
 .ranking-table {
   border-radius: 16px;
   overflow: hidden;
 }
 
-.ranking-table .ant-table-thead > tr > th {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+.ranking-table .ant-table-thead>tr>th {
+  background: #f3f4f6;
   font-weight: 700;
   font-size: 14px;
   color: #1f2937;
@@ -184,17 +192,17 @@
 
 /* Row Highlighting for Top 3 */
 .ranking-table tbody tr.rank-1 {
-  background: linear-gradient(90deg, #fef3c7 0%, #ffffff 100%);
+  background: #fef3c7;
   border-left: 4px solid #f59e0b;
 }
 
 .ranking-table tbody tr.rank-2 {
-  background: linear-gradient(90deg, #f3f4f6 0%, #ffffff 100%);
+  background: #f3f4f6;
   border-left: 4px solid #9ca3af;
 }
 
 .ranking-table tbody tr.rank-3 {
-  background: linear-gradient(90deg, #fed7aa 0%, #ffffff 100%);
+  background: #fed7aa;
   border-left: 4px solid #f97316;
 }
 

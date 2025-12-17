@@ -103,7 +103,9 @@
 .status-completed {
   background: #dbeafe;
   color: #1e40af;
-} /* --- Composer (Post Form) --- */
+}
+
+/* --- Composer (Post Form) --- */
 
 .composer-card {
   background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
@@ -200,11 +202,9 @@
   gap: 8px;
   padding: 10px 24px;
   border-radius: 10px;
-  background: linear-gradient(
-    135deg,
-    var(--color-primary) 0%,
-    var(--color-primary-dark) 100%
-  );
+  background: linear-gradient(135deg,
+      var(--color-primary) 0%,
+      var(--color-primary-dark) 100%);
   color: white;
   border: none;
   font-size: 14px;
@@ -215,11 +215,9 @@
 }
 
 .composer-submit-btn:hover:not(:disabled) {
-  background: linear-gradient(
-    135deg,
-    var(--color-primary-dark) 0%,
-    var(--color-primary) 100%
-  );
+  background: linear-gradient(135deg,
+      var(--color-primary-dark) 0%,
+      var(--color-primary) 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(221, 185, 88, 0.4);
 }
@@ -276,7 +274,6 @@
 }
 
 .post-menu {
-  display: none;
   position: absolute;
   right: 0;
   top: 100%;
@@ -287,10 +284,6 @@
   min-width: 160px;
   z-index: 10;
   margin-top: 4px;
-}
-
-.post-header .group:hover .post-menu {
-  display: block;
 }
 
 .post-menu-item {
@@ -484,7 +477,7 @@
     gap: 6px;
   }
 
-  .event-meta-line > span {
+  .event-meta-line>span {
     display: none;
   }
 

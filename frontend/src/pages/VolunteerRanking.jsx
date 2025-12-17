@@ -106,7 +106,7 @@ export default function VolunteerRanking() {
     },
     {
       title: (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <TrendingUp size={16} />
           <span>Điểm tích lũy</span>
         </div>
@@ -218,7 +218,7 @@ export default function VolunteerRanking() {
     },
     {
       title: (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <TrendingUp size={16} />
           <span>Điểm số</span>
         </div>
@@ -235,7 +235,7 @@ export default function VolunteerRanking() {
     },
     {
       title: (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <Calendar size={16} />
           <span>Sự kiện</span>
         </div>
@@ -250,7 +250,7 @@ export default function VolunteerRanking() {
     },
     {
       title: (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <CheckCircle size={16} />
           <span>Hoàn thành</span>
         </div>
@@ -268,7 +268,7 @@ export default function VolunteerRanking() {
     },
     {
       title: (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <Users size={16} />
           <span>Tình nguyện viên</span>
         </div>

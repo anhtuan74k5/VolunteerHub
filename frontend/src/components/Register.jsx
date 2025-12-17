@@ -159,7 +159,7 @@ export default function Register() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4">
-                    
+
                     {/* 1. Tên đăng nhập + Số điện thoại */}
                     <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
                         <div className="w-full md:w-1/2">
@@ -208,7 +208,7 @@ export default function Register() {
                     {/* 4. Vai trò */}
                     <div className="w-full">
                         <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><UserCog size={18} /> Bạn đăng ký với tư cách:</label>
-                        <select name="role" value={form.role} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black font-medium focus:ring-2 focus:ring-blue-400 outline-none" required>
+                        <select name="role" value={form.role} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black font-normal focus:ring-2 focus:ring-blue-400 outline-none" required>
                             <option value="VOLUNTEER">Tình nguyện viên (Volunteer)</option>
                             <option value="EVENTMANAGER">Quản lý sự kiện (Event Manager)</option>
                         </select>
@@ -248,7 +248,7 @@ export default function Register() {
                     <button type="submit" className="bg-[#2d2d3a] text-white font-bold py-4 rounded-md hover:bg-[#1f1f2b] transition-all w-full shadow-lg active:scale-95">ĐĂNG KÝ</button>
 
                     <div className="text-center pt-2">
-                        <p className="text-sm text-gray-700 font-medium">Đã có tài khoản?{" "}<button type="button" onClick={() => { dispatch(closeModal()); dispatch(openLogin()); }} className="text-blue-600 font-bold hover:underline">Đăng nhập ngay</button></p>
+                        <p className="text-sm text-gray-700 font-medium">Đã có tài khoản?{" "}<button type="button" onClick={() => { dispatch(closeModal()); dispatch(openLogin()); }} className="text-blue-600 font-semibold hover:underline">Đăng nhập ngay</button></p>
                     </div>
                 </form>
             </div>
